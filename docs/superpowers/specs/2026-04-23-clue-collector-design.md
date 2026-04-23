@@ -276,6 +276,33 @@ clue-collector/
 | postgres | postgres:15-alpine | 数据持久化 |
 | redis | redis:7-alpine | 任务队列 + 缓存 |
 
+### Dockerfile
+
+```dockerfile
+FROM python:3.12-slim-bookworm
+
+WORKDIR /app
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装Python依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 复制应用代码
+COPY app/ ./app/
+COPY migrations/ ./migrations/
+COPY config/ ./config/
+COPY alembic.ini .
+
+# 运行数据库迁移并启动服务
+CMD ["sh", "-c", "alembic upgrade head && python -m app.main"]
+```
+
 ### 启动命令
 
 ```bash
@@ -306,7 +333,7 @@ docker-compose logs -f clue-collector
 
 ## 开发语言与技术栈
 
-- **语言**：Python 3.11+
+- **语言**：Python 3.12+
 - **爬虫框架**：Scrapling
 - **ORM**：SQLAlchemy 2.0
 - **数据库**：PostgreSQL 15
