@@ -61,3 +61,6 @@ app.include_router(auth_router)
 
 from app.api.dashboard import router as dashboard_router
 app.include_router(dashboard_router)
+
+from app.api.discovery import router as discovery_router
+app.include_router(discovery_router)
