@@ -54,3 +54,7 @@ async def app_exception_handler(request: Request, exc: AppException):
         status_code=exc.status_code,
         content={"detail": exc.message},
     )
+
+
+from app.api.auth import router as auth_router
+app.include_router(auth_router)
