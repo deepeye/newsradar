@@ -1,0 +1,161 @@
+# 示例数据源配置
+# 可通过 API 或数据库管理界面导入
+
+groups:
+  - name: "热榜组"
+    collect_interval: 5
+    is_active: true
+    sources:
+      - name: "微博热搜"
+        type: "hotlist"
+        collector_type: "configurable"
+        priority: 9
+        config:
+          url: "https://weibo.com/ajax/side/hotSearch"
+          method: "GET"
+          parse_type: "json"
+          parse_rules:
+            container: "data.realtime"
+            title: "note"
+            rank: "rank"
+            heat: "num"
+            link: "scheme"
+
+      - name: "知乎热榜"
+        type: "hotlist"
+        collector_type: "configurable"
+        priority: 8
+        config:
+          url: "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total"
+          method: "GET"
+          parse_type: "json"
+          parse_rules:
+            container: "data"
+            title: "target.title"
+            heat: "detail_text"
+            link: "target.url"
+
+      - name: "抖音热点"
+        type: "hotlist"
+        collector_type: "configurable"
+        priority: 8
+        config:
+          url: "https://www.douyin.com/discover"
+          method: "GET"
+          use_playwright: true  # 抖音需要动态渲染
+          timeout: 30000
+          wait_for_selector: ".hot-list-item"  # 等待热榜元素加载
+          parse_type: "css"
+          parse_rules:
+            container: ".hot-list-item"
+            title: ".title"
+            heat: ".heat-value"
+
+      - name: "今日头条"
+        type: "hotlist"
+        collector_type: "configurable"
+        priority: 7
+        config:
+          url: "https://www.toutiao.com/c/token/tophub/"
+          method: "GET"
+          parse_type: "json"
+          parse_rules:
+            container: "data"
+            title: "title"
+            link: "url"
+
+      - name: "百度热搜"
+        type: "hotlist"
+        collector_type: "configurable"
+        priority: 7
+        config:
+          url: "https://top.baidu.com/board"
+          method: "GET"
+          parse_type: "css"
+          parse_rules:
+            container: ".content-list .item"
+            title: ".title"
+            rank: ".index"
+            heat: ".hot"
+
+      - name: "B站热门"
+        type: "hotlist"
+        collector_type: "configurable"
+        priority: 6
+        config:
+          url: "https://api.bilibili.com/x/web-interface/ranking/index"
+          method: "GET"
+          parse_type: "json"
+          parse_rules:
+            container: "data.list"
+            title: "title"
+            link: "url"
+            author: "owner.name"
+            likes: "stat.like"
+
+  - name: "社交账号组"
+    collect_interval: 30
+    is_active: true
+    sources:
+      # 示例：微信公众号（需要插件）
+      - name: "示例公众号"
+        type: "account"
+        collector_type: "plugin"
+        priority: 5
+        config:
+          plugin: "wechat_mp"
+          account_id: "example_account"
+        is_active: false  # 需要配置插件后启用
+
+      # 示例：微博大V（需要插件）
+      - name: "示例微博账号"
+        type: "account"
+        collector_type: "plugin"
+        priority: 5
+        config:
+          plugin: "weibo_user"
+          user_id: "example_user"
+        is_active: false
+
+  - name: "短视频组"
+    collect_interval: 30
+    is_active: true
+    sources:
+      # 示例：抖音账号（需要插件）
+      - name: "示例抖音博主"
+        type: "video"
+        collector_type: "plugin"
+        priority: 5
+        config:
+          plugin: "douyin_user"
+          user_id: "example_user"
+        is_active: false
+
+      # 示例：小红书博主（需要插件）
+      - name: "示例小红书博主"
+        type: "video"
+        collector_type: "plugin"
+        priority: 5
+        config:
+          plugin: "xiaohongshu_user"
+          user_id: "example_user"
+        is_active: false
+
+  - name: "自定义源组"
+    collect_interval: 60
+    is_active: true
+    sources:
+      # 示例：自定义API
+      - name: "示例API源"
+        type: "custom"
+        collector_type: "configurable"
+        priority: 4
+        config:
+          url: "https://example.com/api/hot"
+          method: "GET"
+          parse_type: "json"
+          parse_rules:
+            container: "items"
+            title: "name"
+            link: "url"
+            heat: "score"

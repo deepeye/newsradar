@@ -1,0 +1,90 @@
+# 线索采集服务配置
+
+app:
+  name: "clue-collector"
+  version: "0.1.0"
+  log_level: "INFO"
+
+# 数据库配置
+database:
+  url: "${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@localhost:5432/clue_collector}"
+  echo: false
+  pool_size: 10
+  max_overflow: 20
+
+# Redis配置
+redis:
+  url: "${REDIS_URL:-redis://localhost:6379/0}"
+  decode_responses: true
+
+# 调度器配置
+scheduler:
+  # 分组采集频率（分钟）
+  intervals:
+    hotlist: 5      # 热榜组
+    social: 30      # 社交账号组
+    video: 30       # 短视频组
+    custom: 60      # 自定义源组
+
+# 采集器配置
+collectors:
+  # 默认请求配置
+  default_timeout: 30
+  default_retry: 3
+
+  # 反爬配置
+  anti_crawl:
+    enabled: true
+    request_interval: 2.0  # 默认请求间隔（秒）
+    min_interval: 1.0      # 最小间隔
+    max_interval: 10.0     # 最大间隔
+
+    # IP池配置
+    ip_pool:
+      enabled: true
+      provider: "external"  # 外部代理API
+      health_check_interval: 300  # 健康检测间隔（秒）
+
+    # UA轮换配置
+    ua_rotation:
+      enabled: true
+      pool_size: 100
+
+    # Cookie池配置
+    cookie_pool:
+      enabled: true
+      ttl: 3600  # Cookie有效期（秒）
+
+# 告警配置
+alerts:
+  enabled: true
+  channels:
+    - log
+    # - email
+    # - webhook
+    # - slack
+
+  # 邮件告警配置
+  email:
+    smtp_host: ""
+    smtp_port: 587
+    smtp_user: ""
+    smtp_password: ""
+    from_addr: ""
+    to_addrs: []
+
+  # Webhook配置（企业微信/钉钉）
+  webhook:
+    url: ""
+    secret: ""
+
+  # Slack配置
+  slack:
+    webhook_url: ""
+    channel: "#alerts"
+
+# 任务队列配置
+task_queue:
+  max_retries: 3
+  retry_delay: 60  # 重试延迟（秒）
+  task_timeout: 300  # 任务超时（秒）

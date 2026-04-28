@@ -1,0 +1,53 @@
+# 代理提供商配置
+# 支持多个代理池提供商
+
+providers:
+  # 示例：外部代理API
+  external_api:
+    name: "external"
+    type: "api"
+    endpoint: "${PROXY_API_ENDPOINT:-}"
+    api_key: "${PROXY_API_KEY:-}"
+
+    # 获取代理的请求配置
+    request:
+      method: "GET"
+      timeout: 10
+
+    # 响应解析配置
+    response:
+      # 代理IP字段
+      ip_field: "ip"
+      port_field: "port"
+      # 代理类型：http, https, socks5
+      type_field: "type"
+
+  # 示例：自建代理池
+  internal_pool:
+    name: "internal"
+    type: "pool"
+    # 固定代理列表
+    proxies:
+      # - host: "proxy1.example.com"
+      #   port: 8080
+      #   type: "http"
+      #   username: ""
+      #   password: ""
+
+# 代理健康检测配置
+health_check:
+  # 检测目标URL
+  test_url: "https://httpbin.org/ip"
+  # 检测超时（秒）
+  timeout: 10
+  # 检测间隔（秒）
+  interval: 300
+
+# 代理评分配置
+scoring:
+  # 响应时间权重
+  response_time_weight: 0.5
+  # 成功率权重
+  success_rate_weight: 0.5
+  # 历史窗口大小
+  history_size: 10
