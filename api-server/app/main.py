@@ -64,3 +64,6 @@ app.include_router(dashboard_router)
 
 from app.api.discovery import router as discovery_router
 app.include_router(discovery_router)
+
+from app.api.outlines import router as outlines_router
+app.include_router(outlines_router)
