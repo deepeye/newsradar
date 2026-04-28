@@ -4,5 +4,6 @@ from app.services.ai_service import AIService
 from app.services.dashboard_service import DashboardService
 from app.services.discovery_service import DiscoveryService
 from app.services.outlines_service import OutlinesService
+from app.services.workbench_service import WorkbenchService
 
-__all__ = ["AuthService", "AIService", "DashboardService", "DiscoveryService", "OutlinesService"]
+__all__ = ["AuthService", "AIService", "DashboardService", "DiscoveryService", "OutlinesService", "WorkbenchService"]

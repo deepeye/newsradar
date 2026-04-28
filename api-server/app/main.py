@@ -67,3 +67,6 @@ app.include_router(discovery_router)
 
 from app.api.outlines import router as outlines_router
 app.include_router(outlines_router)
+
+from app.api.workbench import router as workbench_router
+app.include_router(workbench_router)
