@@ -1,243 +1,49 @@
-# 示例数据源配置
-# 可通过 API 或数据库管理界面导入
+# 数据源配置说明
+#
+# 数据源已改为数据库存储，不再使用配置文件。
+# 请使用以下方式管理数据源：
+#
+# 1. 通过 API 接口管理
+#    POST /api/data-sources - 创建数据源
+#    PUT /api/data-sources/{id} - 更新数据源
+#    DELETE /api/data-sources/{id} - 删除数据源
+#
+# 2. 通过种子数据脚本初始化
+#    python scripts/seed_data_sources.py
+#
+# 3. 通过管理脚本
+#    python scripts/manage_sources.py --add --name "微博热搜" --type hotlist
+#
+# 数据库表结构：
+# - source_groups: 数据源分组（热榜组、微博KOL组等）
+# - data_sources: 数据源配置（URL、解析规则、采集器类型等）
 
-groups:
-  - name: "热榜组"
-    collect_interval: 5
-    is_active: true
-    sources:
-      - name: "微博热搜"
-        type: "hotlist"
-        collector_type: "configurable"
-        priority: 9
-        config:
-          url: "https://weibo.com/ajax/side/hotSearch"
-          method: "GET"
-          parse_type: "json"
-          parse_rules:
-            container: "data.realtime"
-            title: "note"
-            rank: "rank"
-            heat: "num"
-            link: "scheme"
+# ==================== 数据源类型 ====================
+# hotlist: 热榜数据源（微博热搜、知乎热榜、抖音热点等）
+# account: 社交账号（微博 KOL、微信公众号等）
+# video: 短视频账号（抖音博主、小红书博主等）
+# custom: 自定义 API 数据源
 
-      - name: "知乎热榜"
-        type: "hotlist"
-        collector_type: "configurable"
-        priority: 8
-        config:
-          url: "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total"
-          method: "GET"
-          parse_type: "json"
-          parse_rules:
-            container: "data"
-            title: "target.title"
-            heat: "detail_text"
-            link: "target.url"
+# ==================== 采集器类型 ====================
+# configurable: 配置化采集器（通过 URL 和解析规则配置）
+# plugin: 插件化采集器（需要开发专用插件）
 
-      - name: "抖音热点"
-        type: "hotlist"
-        collector_type: "configurable"
-        priority: 8
-        config:
-          url: "https://www.douyin.com/discover"
-          method: "GET"
-          use_playwright: true  # 抖音需要动态渲染
-          timeout: 30000
-          wait_for_selector: ".hot-list-item"  # 等待热榜元素加载
-          parse_type: "css"
-          parse_rules:
-            container: ".hot-list-item"
-            title: ".title"
-            heat: ".heat-value"
+# ==================== config 字段说明 ====================
+# url: 目标地址
+# method: HTTP 方法（GET/POST）
+# parse_type: 解析类型（css/json/xpath）
+# parse_rules: 解析规则
+#   - container: 容器选择器
+#   - title: 标题选择器/路径
+#   - heat: 热度选择器/路径
+#   - link: 链接选择器/路径
+# use_playwright: 是否使用 Playwright 动态渲染
+# timeout: 超时时间（毫秒）
+# wait_for_selector: 等待特定元素的选择器
 
-      - name: "今日头条"
-        type: "hotlist"
-        collector_type: "configurable"
-        priority: 7
-        config:
-          url: "https://www.toutiao.com/c/token/tophub/"
-          method: "GET"
-          parse_type: "json"
-          parse_rules:
-            container: "data"
-            title: "title"
-            link: "url"
-
-      - name: "百度热搜"
-        type: "hotlist"
-        collector_type: "configurable"
-        priority: 7
-        config:
-          url: "https://top.baidu.com/board"
-          method: "GET"
-          parse_type: "css"
-          parse_rules:
-            container: ".content-list .item"
-            title: ".title"
-            rank: ".index"
-            heat: ".hot"
-
-      - name: "B站热门"
-        type: "hotlist"
-        collector_type: "configurable"
-        priority: 6
-        config:
-          url: "https://api.bilibili.com/x/web-interface/ranking/index"
-          method: "GET"
-          parse_type: "json"
-          parse_rules:
-            container: "data.list"
-            title: "title"
-            link: "url"
-            author: "owner.name"
-            likes: "stat.like"
-
-  - name: "社交账号组"
-    collect_interval: 30
-    is_active: true
-    sources:
-      # ==================== 微博 KOL ====================
-      - name: "北京头条"
-        type: "account"
-        collector_type: "configurable"
-        priority: 8
-        config:
-          url: "https://weibo.com/u/1644948230"
-          method: "GET"
-          use_playwright: true
-          timeout: 30000
-          wait_for_selector: ".WB_feed_type"
-          parse_type: "css"
-          parse_rules:
-            container: ".WB_feed_type"
-            title: ".WB_text"
-            author: ".WB_feed_author .W_fb"
-            time: ".WB_from S_txt2"
-
-      - name: "环球时报"
-        type: "account"
-        collector_type: "configurable"
-        priority: 8
-        config:
-          url: "https://weibo.com/u/1974576991"
-          method: "GET"
-          use_playwright: true
-          timeout: 30000
-          wait_for_selector: ".WB_feed_type"
-          parse_type: "css"
-          parse_rules:
-            container: ".WB_feed_type"
-            title: ".WB_text"
-            author: ".WB_feed_author .W_fb"
-
-      - name: "澎湃新闻"
-        type: "account"
-        collector_type: "configurable"
-        priority: 8
-        config:
-          url: "https://weibo.com/u/5044281310"
-          method: "GET"
-          use_playwright: true
-          timeout: 30000
-          wait_for_selector: ".WB_feed_type"
-          parse_type: "css"
-          parse_rules:
-            container: ".WB_feed_type"
-            title: ".WB_text"
-            author: ".WB_feed_author .W_fb"
-
-      - name: "新京报"
-        type: "account"
-        collector_type: "configurable"
-        priority: 8
-        config:
-          url: "https://weibo.com/u/1644114654"
-          method: "GET"
-          use_playwright: true
-          timeout: 30000
-          wait_for_selector: ".WB_feed_type"
-          parse_type: "css"
-          parse_rules:
-            container: ".WB_feed_type"
-            title: ".WB_text"
-            author: ".WB_feed_author .W_fb"
-
-      - name: "南方都市报"
-        type: "account"
-        collector_type: "configurable"
-        priority: 8
-        config:
-          url: "https://weibo.com/u/1644489953"
-          method: "GET"
-          use_playwright: true
-          timeout: 30000
-          wait_for_selector: ".WB_feed_type"
-          parse_type: "css"
-          parse_rules:
-            container: ".WB_feed_type"
-            title: ".WB_text"
-            author: ".WB_feed_author .W_fb"
-
-      # 示例：微信公众号（需要插件）
-      - name: "示例公众号"
-        type: "account"
-        collector_type: "plugin"
-        priority: 5
-        config:
-          plugin: "wechat_mp"
-          account_id: "example_account"
-        is_active: false  # 需要配置插件后启用
-
-      # 示例：微博大V（需要插件）
-      - name: "示例微博账号"
-        type: "account"
-        collector_type: "plugin"
-        priority: 5
-        config:
-          plugin: "weibo_user"
-          user_id: "example_user"
-        is_active: false
-
-  - name: "短视频组"
-    collect_interval: 30
-    is_active: true
-    sources:
-      # 示例：抖音账号（需要插件）
-      - name: "示例抖音博主"
-        type: "video"
-        collector_type: "plugin"
-        priority: 5
-        config:
-          plugin: "douyin_user"
-          user_id: "example_user"
-        is_active: false
-
-      # 示例：小红书博主（需要插件）
-      - name: "示例小红书博主"
-        type: "video"
-        collector_type: "plugin"
-        priority: 5
-        config:
-          plugin: "xiaohongshu_user"
-          user_id: "example_user"
-        is_active: false
-
-  - name: "自定义源组"
-    collect_interval: 60
-    is_active: true
-    sources:
-      # 示例：自定义API
-      - name: "示例API源"
-        type: "custom"
-        collector_type: "configurable"
-        priority: 4
-        config:
-          url: "https://example.com/api/hot"
-          method: "GET"
-          parse_type: "json"
-          parse_rules:
-            container: "items"
-            title: "name"
-            link: "url"
-            heat: "score"
+# ==================== 微博 KOL 示例 ====================
+# 北京头条: https://weibo.com/u/1644948230
+# 环球时报: https://weibo.com/u/1974576991
+# 澎湃新闻: https://weibo.com/u/5044281310
+# 新京报: https://weibo.com/u/1644114654
+# 南方都市报: https://weibo.com/u/1644489953
