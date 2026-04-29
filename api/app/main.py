@@ -70,3 +70,6 @@ app.include_router(outlines_router)
 
 from app.api.workbench import router as workbench_router
 app.include_router(workbench_router)
+
+from app.api.data_sources import router as data_sources_router
+app.include_router(data_sources_router)
