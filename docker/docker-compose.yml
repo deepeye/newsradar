@@ -68,6 +68,7 @@ services:
       - QWEN_API_KEY=${QWEN_API_KEY}
       - QWEN_API_BASE=${QWEN_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1}
       - TRANSLATION_ENABLED=${TRANSLATION_ENABLED:-true}
+      - TRANSLATION_THINKING_ENABLED=${TRANSLATION_THINKING_ENABLED:-false}
     depends_on:
       postgres:
         condition: service_healthy

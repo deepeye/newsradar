@@ -17,6 +17,7 @@ class TranslationService:
         self.api_key = os.getenv("QWEN_API_KEY", settings.translation.api_key)
         self.api_base = os.getenv("QWEN_API_BASE", settings.translation.api_base)
         self.model = settings.translation.model
+        self.thinking_enabled = settings.translation.thinking_enabled
         self.max_length = settings.translation.max_length
         self.timeout = settings.translation.timeout
 
@@ -45,6 +46,27 @@ class TranslationService:
             return None
 
         try:
+            # Build request body
+            request_body = {
+                "model": self.model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a professional translator. Translate the following text to Chinese. Keep the original meaning and style. Only output the translated text, no explanations."
+                    },
+                    {
+                        "role": "user",
+                        "content": text
+                    }
+                ],
+                "temperature": 0.3,
+            }
+
+            # Enable thinking mode if configured
+            if self.thinking_enabled:
+                request_body["enable_thinking"] = True
+                logger.debug("Translation with thinking mode enabled")
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
                     f"{self.api_base}/chat/completions",
@@ -52,27 +74,27 @@ class TranslationService:
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json",
                     },
-                    json={
-                        "model": self.model,
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": "You are a professional translator. Translate the following text to Chinese. Keep the original meaning and style. Only output the translated text, no explanations."
-                            },
-                            {
-                                "role": "user",
-                                "content": text
-                            }
-                        ],
-                        "temperature": 0.3,
-                    }
+                    json=request_body
                 )
 
                 if response.status_code == 200:
                     result = response.json()
-                    translated = result["choices"][0]["message"]["content"]
+                    content = result["choices"][0]["message"]["content"]
+
+                    # Extract thinking content if present (wrapped in <think> tags)
+                    if self.thinking_enabled and "<think>" in content:
+                        # Extract actual translation after thinking section
+                        import re
+                        match = re.search(r'</think>\s*(.+)', content, re.DOTALL)
+                        if match:
+                            translated = match.group(1).strip()
+                        else:
+                            translated = content.replace("<think>", "").replace("</think>", "").strip()
+                    else:
+                        translated = content.strip()
+
                     logger.info(f"Translated {len(text)} chars to {len(translated)} chars")
-                    return translated.strip()
+                    return translated
                 else:
                     logger.error(f"Translation API error: {response.status_code} - {response.text}")
                     return None

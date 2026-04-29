@@ -57,6 +57,7 @@ class TranslationConfig(BaseSettings):
     api_key: str = Field(default="")
     api_base: str = Field(default="https://dashscope.aliyuncs.com/compatible-mode/v1")
     model: str = Field(default="qwen-plus")
+    thinking_enabled: bool = Field(default=False, description="Enable thinking mode for complex translations")
     max_length: int = Field(default=2000)
     timeout: int = Field(default=30)
 
