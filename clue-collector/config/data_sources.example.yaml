@@ -97,6 +97,88 @@ groups:
     collect_interval: 30
     is_active: true
     sources:
+      # ==================== 微博 KOL ====================
+      - name: "北京头条"
+        type: "account"
+        collector_type: "configurable"
+        priority: 8
+        config:
+          url: "https://weibo.com/u/1644948230"
+          method: "GET"
+          use_playwright: true
+          timeout: 30000
+          wait_for_selector: ".WB_feed_type"
+          parse_type: "css"
+          parse_rules:
+            container: ".WB_feed_type"
+            title: ".WB_text"
+            author: ".WB_feed_author .W_fb"
+            time: ".WB_from S_txt2"
+
+      - name: "环球时报"
+        type: "account"
+        collector_type: "configurable"
+        priority: 8
+        config:
+          url: "https://weibo.com/u/1974576991"
+          method: "GET"
+          use_playwright: true
+          timeout: 30000
+          wait_for_selector: ".WB_feed_type"
+          parse_type: "css"
+          parse_rules:
+            container: ".WB_feed_type"
+            title: ".WB_text"
+            author: ".WB_feed_author .W_fb"
+
+      - name: "澎湃新闻"
+        type: "account"
+        collector_type: "configurable"
+        priority: 8
+        config:
+          url: "https://weibo.com/u/5044281310"
+          method: "GET"
+          use_playwright: true
+          timeout: 30000
+          wait_for_selector: ".WB_feed_type"
+          parse_type: "css"
+          parse_rules:
+            container: ".WB_feed_type"
+            title: ".WB_text"
+            author: ".WB_feed_author .W_fb"
+
+      - name: "新京报"
+        type: "account"
+        collector_type: "configurable"
+        priority: 8
+        config:
+          url: "https://weibo.com/u/1644114654"
+          method: "GET"
+          use_playwright: true
+          timeout: 30000
+          wait_for_selector: ".WB_feed_type"
+          parse_type: "css"
+          parse_rules:
+            container: ".WB_feed_type"
+            title: ".WB_text"
+            author: ".WB_feed_author .W_fb"
+
+      - name: "南方都市报"
+        type: "account"
+        collector_type: "configurable"
+        priority: 8
+        config:
+          url: "https://weibo.com/u/1644489953"
+          method: "GET"
+          use_playwright: true
+          timeout: 30000
+          wait_for_selector: ".WB_feed_type"
+          parse_type: "css"
+          parse_rules:
+            container: ".WB_feed_type"
+            title: ".WB_text"
+            author: ".WB_feed_author .W_fb"
+
       # 示例：微信公众号（需要插件）
       - name: "示例公众号"
         type: "account"
