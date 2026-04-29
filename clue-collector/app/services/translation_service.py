@@ -1,4 +1,5 @@
 """Translation service using Qwen model"""
+import os
 import httpx
 from typing import Optional
 from app.config import settings
@@ -12,8 +13,9 @@ class TranslationService:
 
     def __init__(self):
         self.enabled = settings.translation.enabled
-        self.api_key = settings.translation.api_key
-        self.api_base = settings.translation.api_base
+        # Read from environment variables (docker-compose passes QWEN_API_KEY directly)
+        self.api_key = os.getenv("QWEN_API_KEY", settings.translation.api_key)
+        self.api_base = os.getenv("QWEN_API_BASE", settings.translation.api_base)
         self.model = settings.translation.model
         self.max_length = settings.translation.max_length
         self.timeout = settings.translation.timeout
