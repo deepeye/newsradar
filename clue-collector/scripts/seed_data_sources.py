@@ -216,6 +216,25 @@ HOTLIST_SOURCES = [
             },
         },
     },
+    {
+        "name": "Reddit News",
+        "type": DataSourceType.HOTLIST,
+        "priority": 8,
+        "config": {
+            "url": "https://www.reddit.com/news/new/",
+            "method": "GET",
+            "use_playwright": True,
+            "timeout": 30000,
+            "wait_for_selector": "[data-testid='post-container']",
+            "parse_type": "css",
+            "parse_rules": {
+                "container": "[data-testid='post-container']",
+                "title": "[data-testid='post-title']",
+                "heat": "[data-testid='post-score-header']",
+                "link": "a[data-testid='post-link']@href",
+            },
+        },
+    },
 ]
 
 
