@@ -1,50 +1,52 @@
 """Outlines request/response schemas"""
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import Field
 from datetime import datetime
 
+from app.schemas.common import CamelModel
 
-class HeadlineSuggestion(BaseModel):
+
+class HeadlineSuggestion(CamelModel):
     style: str
     text: str
 
 
-class OutlineItem(BaseModel):
+class OutlineItem(CamelModel):
     id: str
     content: str
     has_ai_rewrite: bool = False
 
 
-class OutlineSection(BaseModel):
+class OutlineSection(CamelModel):
     id: str
     number: str
     title: str
     items: List[OutlineItem]
 
 
-class InterviewDirection(BaseModel):
+class InterviewDirection(CamelModel):
     id: str
     role: str
     description: str
 
 
-class ReferenceLink(BaseModel):
+class ReferenceLink(CamelModel):
     id: str
     title: str
     source: str
     url: Optional[str] = None
 
 
-class OutlineGenerateRequest(BaseModel):
+class OutlineGenerateRequest(CamelModel):
     clue_ids: List[str] = Field(..., min_length=1)
     additional_context: Optional[str] = None
 
 
-class OutlineRegenerateRequest(BaseModel):
+class OutlineRegenerateRequest(CamelModel):
     section: str = Field(..., pattern="^(headlines|outline|interview)$")
 
 
-class OutlineResponse(BaseModel):
+class OutlineResponse(CamelModel):
     id: str
     title: str
     summary: Optional[str] = None
@@ -62,18 +64,18 @@ class OutlineResponse(BaseModel):
     updated_at: datetime
 
 
-class OutlineListResponse(BaseModel):
+class OutlineListResponse(CamelModel):
     total: int
     items: List[OutlineResponse]
 
 
-class OutlineCreateRequest(BaseModel):
+class OutlineCreateRequest(CamelModel):
     title: str = Field(..., min_length=1, max_length=500)
     summary: Optional[str] = None
     urgency: str = "中"
 
 
-class OutlineUpdateRequest(BaseModel):
+class OutlineUpdateRequest(CamelModel):
     title: Optional[str] = None
     summary: Optional[str] = None
     urgency: Optional[str] = None

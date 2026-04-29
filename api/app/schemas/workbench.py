@@ -1,10 +1,12 @@
 """Workbench request/response schemas"""
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import Field
 from datetime import datetime
 
+from app.schemas.common import CamelModel
 
-class AISuggestionItem(BaseModel):
+
+class AISuggestionItem(CamelModel):
     id: str
     type: str
     original: str
@@ -12,26 +14,26 @@ class AISuggestionItem(BaseModel):
     reason: str
 
 
-class ContentMetrics(BaseModel):
+class ContentMetrics(CamelModel):
     objectivity: int = 0
     readability: str = ""
 
 
-class ReferenceDoc(BaseModel):
+class ReferenceDoc(CamelModel):
     id: str
     title: str
     source: str
     last_updated: Optional[str] = None
 
 
-class ArticleCreateRequest(BaseModel):
+class ArticleCreateRequest(CamelModel):
     title: str = Field(..., min_length=1, max_length=500)
     outline_id: Optional[str] = None
     target_word_count: int = 1600
     urgent: bool = False
 
 
-class ArticleUpdateRequest(BaseModel):
+class ArticleUpdateRequest(CamelModel):
     title: Optional[str] = None
     content: Optional[str] = None
     target_word_count: Optional[int] = None
@@ -39,7 +41,7 @@ class ArticleUpdateRequest(BaseModel):
     status: Optional[str] = None
 
 
-class ArticleResponse(BaseModel):
+class ArticleResponse(CamelModel):
     id: str
     outline_id: Optional[str] = None
     title: str
@@ -58,6 +60,6 @@ class ArticleResponse(BaseModel):
     updated_at: datetime
 
 
-class ArticleListResponse(BaseModel):
+class ArticleListResponse(CamelModel):
     total: int
     items: List[ArticleResponse]

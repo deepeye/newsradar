@@ -1,22 +1,23 @@
 """AI Discovery request/response schemas"""
 from typing import List, Optional
-from pydantic import BaseModel
+
+from app.schemas.common import CamelModel
 
 
-class OrgConfigResponse(BaseModel):
+class OrgConfigResponse(CamelModel):
     id: str
     name: str
     domains: List[str]
     style: List[str]
 
 
-class OrgConfigUpdate(BaseModel):
+class OrgConfigUpdate(CamelModel):
     name: Optional[str] = None
     domains: Optional[List[str]] = None
     style: Optional[List[str]] = None
 
 
-class AITopicRecommendation(BaseModel):
+class AITopicRecommendation(CamelModel):
     id: str
     source: str
     source_icon: str
@@ -26,7 +27,7 @@ class AITopicRecommendation(BaseModel):
     angles: List[str]
 
 
-class DiscoveryResponse(BaseModel):
+class DiscoveryResponse(CamelModel):
     org_config: OrgConfigResponse
     total_clues: int
     last_updated: str

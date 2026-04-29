@@ -1,9 +1,10 @@
 """Dashboard response schemas"""
 from typing import Optional, List
-from pydantic import BaseModel
+
+from app.schemas.common import CamelModel
 
 
-class TrendingItem(BaseModel):
+class TrendingItem(CamelModel):
     id: str
     rank: int
     title: str
@@ -12,14 +13,14 @@ class TrendingItem(BaseModel):
     url: Optional[str] = None
 
 
-class PlatformTrendingCard(BaseModel):
+class PlatformTrendingCard(CamelModel):
     platform: str
     platform_label: str
     items: List[TrendingItem]
     last_updated: str
 
 
-class KOLPost(BaseModel):
+class KOLPost(CamelModel):
     id: str
     author: str
     verified: Optional[bool] = None
@@ -30,19 +31,19 @@ class KOLPost(BaseModel):
     time_ago: str = ""
 
 
-class KOLColumn(BaseModel):
+class KOLColumn(CamelModel):
     platform: str
     platform_label: str
     posts: List[KOLPost]
 
 
-class AISuggestion(BaseModel):
+class AISuggestion(CamelModel):
     id: str
     title: str
     description: str
 
 
-class DashboardData(BaseModel):
+class DashboardData(CamelModel):
     trending_cards: List[PlatformTrendingCard]
     kol_columns: List[KOLColumn]
     ai_suggestions: List[AISuggestion]

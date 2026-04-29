@@ -7,6 +7,6 @@ import type { WorkbenchData } from "@/lib/types/workbench";
 export function useWorkbenchData() {
   return useQuery({
     queryKey: ["workbench"],
-    queryFn: () => fetchFromApi<WorkbenchData>("/api/workbench"),
+    queryFn: () => fetchFromApi<WorkbenchData>("/api/workbench/articles"),
   });
 }

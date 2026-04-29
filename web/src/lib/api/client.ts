@@ -9,7 +9,7 @@ const mockDataMap: Record<string, unknown> = {
   "/api/dashboard": dashboardData,
   "/api/discovery": aiDiscoveryData,
   "/api/outlines": outlinesData,
-  "/api/workbench": workbenchData,
+  "/api/workbench/articles": workbenchData,
 };
 
 function getToken(): string | null {
