@@ -40,6 +40,40 @@ WEIBO_KOL_ACCOUNTS = [
     },
 ]
 
+# X (Twitter) KOL 账号
+X_KOL_ACCOUNTS = [
+    {
+        "name": "Elon Musk",
+        "handle": "elonmusk",
+        "priority": 10,
+    },
+    {
+        "name": "华尔街日报中文网",
+        "handle": "ChineseWSJ",
+        "priority": 9,
+    },
+    {
+        "name": "Donald J. Trump",
+        "handle": "realDonaldTrump",
+        "priority": 10,
+    },
+    {
+        "name": "Bloomberg",
+        "handle": "business",
+        "priority": 9,
+    },
+    {
+        "name": "BBC News",
+        "handle": "BBCWorld",
+        "priority": 9,
+    },
+    {
+        "name": "CNN",
+        "handle": "CNN",
+        "priority": 9,
+    },
+]
+
 # 热榜数据源
 HOTLIST_SOURCES = [
     {
@@ -198,13 +232,22 @@ async def seed_data_sources(db: AsyncSession) -> None:
     db.add(hotlist_group)
 
     # 创建微博 KOL 组
-    kol_group = SourceGroup(
+    weibo_group = SourceGroup(
         id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
         name="微博KOL组",
         collect_interval=30,
         is_active=True,
     )
-    db.add(kol_group)
+    db.add(weibo_group)
+
+    # 创建 X (Twitter) KOL 组
+    x_group = SourceGroup(
+        id=uuid.UUID("00000000-0000-0000-0000-000000000003"),
+        name="X KOL组",
+        collect_interval=30,
+        is_active=True,
+    )
+    db.add(x_group)
 
     # 插入热榜数据源
     for i, source_data in enumerate(HOTLIST_SOURCES):
@@ -225,7 +268,7 @@ async def seed_data_sources(db: AsyncSession) -> None:
     for i, kol_data in enumerate(WEIBO_KOL_ACCOUNTS):
         source = DataSource(
             id=uuid.UUID(f"00000000-0000-0001-0000-{str(i+1).zfill(12)}"),
-            group_id=kol_group.id,
+            group_id=weibo_group.id,
             name=kol_data["name"],
             type=DataSourceType.ACCOUNT,
             collector_type=CollectorType.CONFIGURABLE,
@@ -249,9 +292,40 @@ async def seed_data_sources(db: AsyncSession) -> None:
         )
         db.add(source)
 
+    # 插入 X (Twitter) KOL 数据源
+    for i, kol_data in enumerate(X_KOL_ACCOUNTS):
+        source = DataSource(
+            id=uuid.UUID(f"00000000-0000-0002-0000-{str(i+1).zfill(12)}"),
+            group_id=x_group.id,
+            name=kol_data["name"],
+            type=DataSourceType.ACCOUNT,
+            collector_type=CollectorType.CONFIGURABLE,
+            config={
+                "url": f"https://x.com/{kol_data['handle']}",
+                "method": "GET",
+                "use_playwright": True,
+                "timeout": 60000,
+                "wait_for_selector": "[data-testid='tweet']",
+                "parse_type": "css",
+                "parse_rules": {
+                    "container": "[data-testid='tweet']",
+                    "title": "[data-testid='tweetText']",
+                    "author": "[data-testid='User-Name']",
+                    "time": "time",
+                },
+                "handle": kol_data["handle"],
+                "platform": "x",
+            },
+            priority=kol_data["priority"],
+            is_active=True,
+            status=SourceStatus.ACTIVE,
+        )
+        db.add(source)
+
     await db.commit()
     print(f"Seeded {len(HOTLIST_SOURCES)} hotlist sources")
     print(f"Seeded {len(WEIBO_KOL_ACCOUNTS)} weibo KOL sources")
+    print(f"Seeded {len(X_KOL_ACCOUNTS)} X KOL sources")
 
 
 async def main() -> None:
