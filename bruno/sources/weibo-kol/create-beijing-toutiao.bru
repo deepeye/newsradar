@@ -1,0 +1,41 @@
+meta {
+  name: Create Weibo KOL - Beijing Toutiao
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{API_URL}}/api/data-sources
+  body: json
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "groupId": "00000000-0000-0000-0000-000000000002",
+    "name": "北京头条",
+    "type": "account",
+    "collectorType": "configurable",
+    "config": {
+      "url": "https://weibo.com/u/1644948230",
+      "method": "GET",
+      "usePlaywright": true,
+      "timeout": 30000,
+      "waitForSelector": ".WB_feed_type",
+      "parseType": "css",
+      "parseRules": {
+        "container": ".WB_feed_type",
+        "title": ".WB_text",
+        "author": ".WB_feed_author .W_fb"
+      },
+      "uid": "1644948230"
+    },
+    "priority": 8,
+    "isActive": true
+  }
+}

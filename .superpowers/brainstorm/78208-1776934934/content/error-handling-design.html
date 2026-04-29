@@ -1,0 +1,221 @@
+<h2>异常处理模块设计</h2>
+<p class="subtitle">错误分类 + 智能重试 + 降级策略 + 日志告警</p>
+
+<div class="mockup">
+  <div class="mockup-header">异常处理架构</div>
+  <div class="mockup-body" style="padding: 20px; background: #f8f9fa;">
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+
+      <!-- 错误分类 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #d32f2f; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          🔍 错误类型分类
+        </div>
+        <div style="padding: 15px;">
+          <div style="display: flex; gap: 10px;">
+            <table style="flex: 1; font-size: 12px; border-collapse: collapse;">
+              <tr style="background: #f5f5f5;"><th style="padding: 8px;">错误类型</th><th style="padding: 8px;">触发条件</th><th style="padding: 8px;">处理策略</th></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #f57c00;">network_timeout</td><td style="padding: 8px; border-bottom: 1px solid #eee;">请求超时</td><td style="padding: 8px; border-bottom: 1px solid #eee;">重试3次，每次更换IP</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #1976d2;">connection_error</td><td style="padding: 8px; border-bottom: 1px solid #eee;">连接失败</td><td style="padding: 8px; border-bottom: 1px solid #eee;">重试2次，检查代理可用性</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #c2185b;">blocked_ip</td><td style="padding: 8px; border-bottom: 1px solid #eee;">403/429状态码</td><td style="padding: 8px; border-bottom: 1px solid #eee;">立即切换IP，降频采集</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #7b1fa2;">parse_error</td><td style="padding: 8px; border-bottom: 1px solid #eee;">解析失败</td><td style="padding: 8px; border-bottom: 1px solid #eee;">记录日志，通知管理员检查规则</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee; color: #388e3c;">cookie_expired</td><td style="padding: 8px; border-bottom: 1px solid #eee;">登录态失效</td><td style="padding: 8px; border-bottom: 1px solid #eee;">切换Cookie池中下一个</td></tr>
+              <tr><td style="padding: 8px; color: #5d4037;">source_unavailable</td><td style="padding: 8px;">源站不可访问</td><td style="padding: 8px;">暂停数据源，等待恢复检测</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 重试策略 -->
+      <div style="display: flex; gap: 15px;">
+        <div style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+          <div style="background: #1976d2; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+            🔁 智能重试策略
+          </div>
+          <div style="padding: 15px;">
+            <pre style="font-size: 11px; background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">
+retry_config:
+  max_retries: 3              # 最大重试次数
+  retry_delay:                # 重试延迟（秒）
+    initial: 5                # 初始延迟
+    multiplier: 2             # 延迟倍数
+    max: 60                   # 最大延迟
+
+  retry_on_errors:            # 需重试的错误类型
+    - network_timeout
+    - connection_error
+    - blocked_ip
+    - cookie_expired
+
+  no_retry_on:                # 不重试的错误类型
+    - parse_error             # 规则问题，重试无效
+    - source_unavailable      # 源站问题，需人工介入</pre>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+              <b>延迟策略：</b> 5s → 10s → 20s（指数退避）
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+          <div style="background: #f57c00; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+            ⏬ 降级策略
+          </div>
+          <div style="padding: 15px;">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="background: #fff3e0; padding: 10px; border-radius: 4px;">
+                <div style="font-weight: bold; margin-bottom: 5px;">1. IP降级</div>
+                <div style="font-size: 12px; color: #666;">连续3次IP被封 → 标记IP不可用 → 切换新IP → 通知代理池服务</div>
+              </div>
+              <div style="background: #fce4ec; padding: 10px; border-radius: 4px;">
+                <div style="font-weight: bold; margin-bottom: 5px;">2. 频率降级</div>
+                <div style="font-size: 12px; color: #666;">检测到429 → 采集频率降低50% → 连续成功5次后逐步恢复</div>
+              </div>
+              <div style="background: #ffebee; padding: 10px; border-radius: 4px;">
+                <div style="font-weight: bold; margin-bottom: 5px;">3. 数据源降级</div>
+                <div style="font-size: 12px; color: #666;">连续5次失败 → 数据源状态改为 error → 暂停采集 → 通知管理员</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 异常处理流程 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #7b1fa2; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          ⚡ 异常处理流程
+        </div>
+        <div style="padding: 20px;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <div style="background: #e8f5e9; border: 2px solid #388e3c; padding: 8px 12px; border-radius: 8px;">采集执行</div>
+            <div style="color: #388e3c;">→</div>
+            <div style="background: #fff3e0; border: 2px solid #f57c00; padding: 8px 12px; border-radius: 8px;">发生错误</div>
+            <div style="color: #f57c00;">→</div>
+            <div style="background: #e3f2fd; border: 2px solid #1976d2; padding: 8px 12px; border-radius: 8px;">错误分类</div>
+            <div style="color: #1976d2;">→</div>
+            <div style="background: #fce4ec; border: 2px solid #c2185b; padding: 8px 12px; border-radius: 8px;">判断是否重试</div>
+            <div style="color: #c2185b;">→</div>
+
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="background: #c8e6c9; border: 2px solid #2e7d32; padding: 8px 12px; border-radius: 8px;">Yes: 重试</div>
+              <div style="color: #2e7d32;">→</div>
+              <div style="background: #fff9c4; border: 2px solid #f9a825; padding: 8px 12px; border-radius: 8px;">应用降级措施</div>
+              <div style="color: #f9a825;">→</div>
+              <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 8px;">重新执行</div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="background: #ffcdd2; border: 2px solid #d32f2f; padding: 8px 12px; border-radius: 8px;">No: 放弃</div>
+              <div style="color: #d32f2f;">→</div>
+              <div style="background: #efebe9; border: 2px solid #5d4037; padding: 8px 12px; border-radius: 8px;">记录日志</div>
+              <div style="color: #5d4037;">→</div>
+              <div style="background: #f3e5f5; border: 2px solid #7b1fa2; padding: 8px 12px; border-radius: 8px;">更新数据源状态</div>
+              <div style="color: #7b1fa2;">→</div>
+              <div style="background: #ffebee; padding: 8px 12px; border-radius: 8px;">告警通知</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 告警机制 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #5d4037; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          🔔 告警机制
+        </div>
+        <div style="padding: 15px; display: flex; gap: 15px;">
+          <div style="flex: 1;">
+            <div style="font-weight: bold; margin-bottom: 8px;">告警触发条件：</div>
+            <ul style="font-size: 12px; color: #666; margin: 0; padding-left: 15px;">
+              <li>数据源连续5次采集失败</li>
+              <li>数据源状态变更为 paused</li>
+              <li>解析规则失效（parse_error 连续3次）</li>
+              <li>代理池可用IP低于阈值（&lt;10）</li>
+              <li>Cookie池全部失效</li>
+            </ul>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: bold; margin-bottom: 8px;">告警方式（可配置）：</div>
+            <ul style="font-size: 12px; color: #666; margin: 0; padding-left: 15px;">
+              <li>日志记录（结构化JSON日志）</li>
+              <li>邮件通知</li>
+              <li>Webhook（对接企业微信/钉钉）</li>
+              <li>Slack消息</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 代码结构 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #388e3c; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          🧩 异常处理模块代码结构
+        </div>
+        <div style="padding: 15px;">
+          <pre style="font-size: 11px; background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">
+class ErrorHandler:
+    """异常处理器"""
+
+    def __init__(self, config: RetryConfig):
+        self.config = config
+        self.alerter: Alerter
+        self.source_status_manager: SourceStatusManager
+
+    async def handle(self, error: Exception, context: CollectContext) -> HandleResult:
+        """处理采集异常"""
+        error_type = self.classify_error(error)
+        source_id = context.source_id
+
+        if error_type in self.config.no_retry_on:
+            # 不重试，直接记录并告警
+            await self.log_error(source_id, error_type, error)
+            await self.alerter.notify(source_id, error_type, error)
+            await self.source_status_manager.pause(source_id, error_type)
+            return HandleResult(action="abort", success=False)
+
+        # 尝试重试
+        for attempt in range(self.config.max_retries):
+            delay = self.calculate_delay(attempt)
+            await asyncio.sleep(delay)
+
+            # 应用降级措施
+            await self.apply_degradation(error_type, context)
+
+            # 重新执行采集
+            result = await self.retry_collect(context)
+            if result.success:
+                return HandleResult(action="retry_success", success=True, attempts=attempt+1)
+
+        # 重试全部失败
+        await self.log_error(source_id, error_type, error, retry_count=self.config.max_retries)
+        await self.alerter.notify(source_id, error_type, error, retry_count=self.config.max_retries)
+        await self.source_status_manager.pause(source_id, error_type)
+        return HandleResult(action="abort", success=False)
+
+    def classify_error(self, error: Exception) -> str:
+        """错误分类"""
+        if isinstance(error, asyncio.TimeoutError):
+            return "network_timeout"
+        elif isinstance(error, ConnectionError):
+            return "connection_error"
+        elif isinstance(error, BlockedError):  # 403/429
+            return "blocked_ip"
+        elif isinstance(error, ParseError):
+            return "parse_error"
+        elif isinstance(error, CookieExpiredError):
+            return "cookie_expired"
+        else:
+            return "source_unavailable"
+
+    def calculate_delay(self, attempt: int) -> int:
+        """计算重试延迟（指数退避）"""
+        delay = self.config.retry_delay.initial * (self.config.retry_delay.multiplier ** attempt)
+        return min(delay, self.config.retry_delay.max)</pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 15px; color: #666;">
+<b>设计要点：</b> 错误分类决定处理策略，可恢复错误智能重试，不可恢复错误立即告警。降级措施逐步生效，避免雪崩效应。
+</p>

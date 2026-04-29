@@ -1,0 +1,134 @@
+<h2>采集器设计</h2>
+<p class="subtitle">配置化采集器 + 插件化采集器 混合架构</p>
+
+<div class="mockup">
+  <div class="mockup-header">采集引擎模块结构</div>
+  <div class="mockup-body" style="padding: 20px; background: #f8f9fa;">
+    <div style="display: flex; gap: 20px;">
+
+      <!-- 配置化采集器 -->
+      <div style="flex: 1; border: 2px solid #f57c00; border-radius: 8px; background: #fff;">
+        <div style="background: #f57c00; color: #fff; padding: 12px; font-weight: bold;">
+          🔧 配置化采集器
+        </div>
+        <div style="padding: 15px;">
+          <div style="font-size: 13px; color: #666; margin-bottom: 10px;">适用于：热榜类数据源（规则标准化）</div>
+
+          <div style="background: #fff3e0; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">配置示例：</div>
+            <pre style="font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; overflow-x: auto;">
+{
+  "url": "https://weibo.com/hot",
+  "method": "GET",
+  "parse_type": "css",  // css/json/xpath
+  "parse_rules": {
+    "container": ".hot-list li",
+    "title": ".title",
+    "rank": ".rank",
+    "heat": ".heat-value",
+    "link": "a[href]"
+  },
+  "pagination": {
+    "enabled": false
+  }
+}</pre>
+          </div>
+
+          <div style="font-weight: bold; margin-bottom: 5px;">支持的解析类型：</div>
+          <div style="display: flex; gap: 8px; font-size: 12px;">
+            <span style="background: #e3f2fd; padding: 4px 8px; border-radius: 4px;">CSS选择器</span>
+            <span style="background: #e8f5e9; padding: 4px 8px; border-radius: 4px;">JSON API</span>
+            <span style="background: #fce4ec; padding: 4px 8px; border-radius: 4px;">XPath</span>
+          </div>
+
+          <div style="margin-top: 10px; font-weight: bold;">适用数据源：</div>
+          <div style="font-size: 12px; color: #666;">微博热搜、知乎热榜、抖音热点、今日头条、百度热搜、B站热门等</div>
+        </div>
+      </div>
+
+      <!-- 插件化采集器 -->
+      <div style="flex: 1; border: 2px solid #c2185b; border-radius: 8px; background: #fff;">
+        <div style="background: #c2185b; color: #fff; padding: 12px; font-weight: bold;">
+          🧩 插件化采集器
+        </div>
+        <div style="padding: 15px;">
+          <div style="font-size: 13px; color: #666; margin-bottom: 10px;">适用于：复杂数据源（需要特殊处理）</div>
+
+          <div style="background: #fce4ec; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">插件接口定义：</div>
+            <pre style="font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px; overflow-x: auto;">
+class BaseCollector(ABC):
+    name: str           # 插件名称
+    version: str        # 版本号
+    supported_types: [] # 支持的数据类型
+
+    async def collect(
+        self,
+        source: DataSource,
+        anti_crawl: AntiCrawlModule
+    ) -> List[ClueData]:
+        """执行采集，返回线索数据"""
+
+    async def validate(
+        self,
+        config: dict
+    ) -> bool:
+        """验证配置是否有效"""</pre>
+          </div>
+
+          <div style="font-weight: bold; margin-bottom: 5px;">插件需要处理：</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;">
+            <span style="background: #ffebee; padding: 4px 8px; border-radius: 4px;">登录态保持</span>
+            <span style="background: #fff3e0; padding: 4px 8px; border-radius: 4px;">Cookie管理</span>
+            <span style="background: #e8f5e9; padding: 4px 8px; border-radius: 4px;">动态渲染</span>
+            <span style="background: #e3f2fd; padding: 4px 8px; border-radius: 4px;">反爬对抗</span>
+          </div>
+
+          <div style="margin-top: 10px; font-weight: bold;">适用数据源：</div>
+          <div style="font-size: 12px; color: #666;">微信公众号、微博大V、抖音账号、小红书博主、自定义API源</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Scrapling 集成 -->
+    <div style="margin-top: 20px; border: 2px solid #388e3c; border-radius: 8px; background: #fff;">
+      <div style="background: #388e3c; color: #fff; padding: 12px; font-weight: bold;">
+        🕷️ Scrapling 框架集成
+      </div>
+      <div style="padding: 15px; display: flex; gap: 15px;">
+        <div style="flex: 1;">
+          <div style="font-weight: bold; margin-bottom: 8px;">配置化采集器使用：</div>
+          <pre style="font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px;">
+from scrapling import FetchAdaptor
+
+# 自动适应页面变化
+page = FetchAdaptor.auto_match(
+    url=config.url,
+    auto_match=True  # 自动匹配元素
+)
+items = page.css(config.parse_rules['container'])
+</pre>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-weight: bold; margin-bottom: 8px;">插件化采集器使用：</div>
+          <pre style="font-size: 11px; background: #f5f5f5; padding: 8px; border-radius: 4px;">
+from scrapling import PlaywrightAdaptor
+
+# 处理动态渲染页面
+page = PlaywrightAdaptor.auto_match(
+    url=url,
+    stealth=True,  # 隐身模式
+    wait_for='selector'
+)
+</pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p style="margin-top: 15px; color: #666;">
+<b>采集器选择规则：</b> 新增数据源时，若解析规则可标准化描述 → 配置化采集器；若需要登录/动态渲染/特殊反爬 → 插件化采集器。
+</p>

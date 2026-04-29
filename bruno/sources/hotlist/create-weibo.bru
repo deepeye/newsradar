@@ -1,0 +1,41 @@
+meta {
+  name: Create Weibo Hotlist
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{API_URL}}/api/data-sources
+  body: json
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "groupId": "00000000-0000-0000-0000-000000000001",
+    "name": "微博热搜",
+    "type": "hotlist",
+    "collectorType": "configurable",
+    "config": {
+      "url": "https://weibo.com/hot/search",
+      "method": "GET",
+      "usePlaywright": true,
+      "timeout": 30000,
+      "waitForSelector": ".search-card",
+      "parseType": "css",
+      "parseRules": {
+        "container": ".card-wrap",
+        "title": ".card-name",
+        "heat": ".card-num",
+        "link": "a@href"
+      }
+    },
+    "priority": 9,
+    "isActive": true
+  }
+}

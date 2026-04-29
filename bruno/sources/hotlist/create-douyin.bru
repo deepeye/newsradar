@@ -1,0 +1,41 @@
+meta {
+  name: Create Douyin Hotlist
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{API_URL}}/api/data-sources
+  body: json
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "groupId": "00000000-0000-0000-0000-000000000001",
+    "name": "抖音热榜",
+    "type": "hotlist",
+    "collectorType": "configurable",
+    "config": {
+      "url": "https://www.douyin.com/hot",
+      "method": "GET",
+      "usePlaywright": true,
+      "timeout": 30000,
+      "waitForSelector": ".hot-list-item",
+      "parseType": "css",
+      "parseRules": {
+        "container": ".hot-list-item",
+        "title": ".title",
+        "heat": ".heat-value",
+        "link": "a@href"
+      }
+    },
+    "priority": 9,
+    "isActive": true
+  }
+}

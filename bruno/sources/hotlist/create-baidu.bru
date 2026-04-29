@@ -1,0 +1,38 @@
+meta {
+  name: Create Baidu Hotlist
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{API_URL}}/api/data-sources
+  body: json
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "groupId": "00000000-0000-0000-0000-000000000001",
+    "name": "百度热搜",
+    "type": "hotlist",
+    "collectorType": "configurable",
+    "config": {
+      "url": "https://top.baidu.com/board?tab=realtime",
+      "method": "GET",
+      "parseType": "css",
+      "parseRules": {
+        "container": ".container-bg .content_1YWBm",
+        "title": ".title_dIF3B",
+        "heat": ".hot-index_1Bl1a",
+        "link": "a@href"
+      }
+    },
+    "priority": 9,
+    "isActive": true
+  }
+}

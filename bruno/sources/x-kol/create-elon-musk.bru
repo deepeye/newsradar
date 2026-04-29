@@ -1,0 +1,43 @@
+meta {
+  name: Create X KOL - Elon Musk
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{API_URL}}/api/data-sources
+  body: json
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "groupId": "00000000-0000-0000-0000-000000000003",
+    "name": "Elon Musk",
+    "type": "account",
+    "collectorType": "configurable",
+    "config": {
+      "url": "https://x.com/elonmusk",
+      "method": "GET",
+      "usePlaywright": true,
+      "timeout": 60000,
+      "waitForSelector": "[data-testid='tweet']",
+      "parseType": "css",
+      "parseRules": {
+        "container": "[data-testid='tweet']",
+        "title": "[data-testid='tweetText']",
+        "author": "[data-testid='User-Name']",
+        "time": "time"
+      },
+      "handle": "elonmusk",
+      "platform": "x"
+    },
+    "priority": 10,
+    "isActive": true
+  }
+}

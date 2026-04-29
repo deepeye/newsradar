@@ -1,0 +1,41 @@
+meta {
+  name: Create Zhihu Hotlist
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{API_URL}}/api/data-sources
+  body: json
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "groupId": "00000000-0000-0000-0000-000000000001",
+    "name": "知乎热榜",
+    "type": "hotlist",
+    "collectorType": "configurable",
+    "config": {
+      "url": "https://www.zhihu.com/hot",
+      "method": "GET",
+      "usePlaywright": true,
+      "timeout": 30000,
+      "waitForSelector": ".HotList-item",
+      "parseType": "css",
+      "parseRules": {
+        "container": ".HotList-item",
+        "title": ".HotItem-title",
+        "heat": ".HotItem-metrics",
+        "link": "a@href"
+      }
+    },
+    "priority": 9,
+    "isActive": true
+  }
+}

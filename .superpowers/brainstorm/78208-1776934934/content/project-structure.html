@@ -1,0 +1,276 @@
+<h2>项目结构 + 部署配置</h2>
+<p class="subtitle">目录结构 + Docker Compose 配置</p>
+
+<div class="mockup">
+  <div class="mockup-header">项目目录结构</div>
+  <div class="mockup-body" style="padding: 20px; background: #f8f9fa;">
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+
+      <!-- 目录结构 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #1976d2; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📁 clue-collector/
+        </div>
+        <div style="padding: 15px;">
+          <pre style="font-size: 12px; background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto;">
+clue-collector/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                 # 服务入口
+│   ├── config.py               # 配置管理
+│   │
+│   ├── scheduler/              # 调度模块
+│   │   ├── __init__.py
+│   │   ├── scheduler.py        # 分组调度器
+│   │   ├── task_runner.py      # 任务执行器
+│   │   └── task_queue.py       # Redis任务队列
+│   │
+│   ├── collectors/             # 采集模块
+│   │   ├── __init__.py
+│   │   ├── base.py             # BaseCollector接口
+│   │   ├── configurable.py     # 配置化采集器
+│   │   ├── registry.py         # 采集器注册表
+│   │   └── plugins/            # 插件化采集器
+│   │       ├── __init__.py
+│   │       ├── weibo_account.py
+│   │       ├── douyin_account.py
+│   │       └── custom_source.py
+│   │
+│   ├── anti_crawl/             # 反爬防护模块
+│   │   ├── __init__.py
+│   │   ├── module.py           # AntiCrawlModule统一入口
+│   │   ├── proxy_pool.py       # IP轮换池
+│   │   ├── ua_pool.py          # UA轮换池
+│   │   ├── cookie_pool.py      # Cookie池管理
+│   │   └── rate_limiter.py     # 频率自适应控制
+│   │
+│   ├── error_handler/          # 异常处理模块
+│   │   ├── __init__.py
+│   │   ├── handler.py          # ErrorHandler
+│   │   ├── classifier.py       # 错误分类器
+│   │   └── alerter.py          # 告警通知
+│   │
+│   ├── storage/                # 存储模块
+│   │   ├── __init__.py
+│   │   ├── database.py         # PostgreSQL连接管理
+│   │   ├── models.py           # 数据模型定义（ SQLAlchemy）
+│   │   ├── clue_store.py       # 线索数据存储
+│   │   └── hotlist_history.py  # 热榜变化历史
+│   │
+│   └── utils/                  # 工具模块
+│   │   ├── __init__.py
+│   │   ├── logger.py           # 结构化日志
+│   │   ├── dedup.py            # 去重工具
+│   │   └── hash.py             # 哈希计算
+│   │
+├── migrations/                 # 数据库迁移
+│   ├── versions/
+│   └── env.py
+│
+├── tests/                      # 测试
+│   ├── __init__.py
+│   ├── test_scheduler.py
+│   ├── test_collectors.py
+│   ├── test_anti_crawl.py
+│   └── test_error_handler.py
+│
+├── docker/
+│   ├── Dockerfile              # 服务镜像
+│   └── docker-compose.yml      # Compose配置
+│
+├── config/
+│   ├── settings.yaml           # 主配置文件
+│   ├── logging.yaml            # 日志配置
+│   └── proxy_providers.yaml    # 代理服务商配置
+│
+├── requirements.txt            # Python依赖
+├── alembic.ini                 # 数据库迁移配置
+├── README.md                   # 项目说明
+└── Makefile                    # 常用命令</pre>
+        </div>
+      </div>
+
+      <!-- Docker Compose -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #388e3c; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          🐳 docker-compose.yml
+        </div>
+        <div style="padding: 15px;">
+          <pre style="font-size: 11px; background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto;">
+version: '3.8'
+
+services:
+  # 采集服务
+  clue-collector:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: clue-collector
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=clue_collector
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PROXY_API_KEY=${PROXY_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    networks:
+      - clue-network
+
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: clue-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=clue_collector
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - clue-network
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: clue-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - clue-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  clue-network:
+    driver: bridge</pre>
+        </div>
+      </div>
+
+      <!-- Dockerfile -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #f57c00; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📦 Dockerfile
+        </div>
+        <div style="padding: 15px;">
+          <pre style="font-size: 11px; background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto;">
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装Python依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 复制应用代码
+COPY app/ ./app/
+COPY migrations/ ./migrations/
+COPY config/ ./config/
+COPY alembic.ini .
+
+# 运行数据库迁移并启动服务
+CMD ["sh", "-c", "alembic upgrade head && python -m app.main"]</pre>
+        </div>
+      </div>
+
+      <!-- requirements.txt -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #7b1fa2; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📋 requirements.txt
+        </div>
+        <div style="padding: 15px;">
+          <pre style="font-size: 11px; background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto;">
+# 核心依赖
+scrapling>=0.5.0            # 爬虫框架
+asyncio>=3.4.3              # 异步支持
+
+# 数据库
+sqlalchemy>=2.0.0           # ORM
+alembic>=1.12.0             # 数据库迁移
+asyncpg>=0.28.0             # PostgreSQL异步驱动
+
+# Redis
+redis>=4.5.0                # Redis客户端
+aioredis>=2.0.0             # Redis异步驱动
+
+# 配置管理
+pyyaml>=6.0                 # YAML配置解析
+pydantic>=2.0               # 配置验证
+
+# 日志
+structlog>=23.0             # 结构化日志
+
+# 工具
+httpx>=0.24.0               # HTTP客户端
+tenacity>=8.2.0             # 重试库
+
+# 告警通知（可选）
+webhooks>=0.1.0             # Webhook通知</pre>
+        </div>
+      </div>
+
+      <!-- 启动命令 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #5d4037; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          🚀 启动命令
+        </div>
+        <div style="padding: 15px;">
+          <div style="display: flex; gap: 15px;">
+            <div style="flex: 1; background: #e8f5e9; padding: 12px; border-radius: 4px;">
+              <div style="font-weight: bold; margin-bottom: 8px;">启动服务：</div>
+              <pre style="font-size: 12px; background: #f5f5f5; padding: 8px; border-radius: 4px;">
+# 创建环境变量文件
+cp .env.example .env
+
+# 启动所有服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f clue-collector</pre>
+            </div>
+            <div style="flex: 1; background: #fff3e0; padding: 12px; border-radius: 4px;">
+              <div style="font-weight: bold; margin-bottom: 8px;">管理命令：</div>
+              <pre style="font-size: 12px; background: #f5f5f5; padding: 8px; border-radius: 4px;">
+# 停止服务
+docker-compose down
+
+# 重启服务
+docker-compose restart
+
+# 查看服务状态
+docker-compose ps</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 15px; color: #666;">
+<b>部署要点：</b> Docker Compose 一键启动，PostgreSQL 数据持久化，Redis 任务队列，环境变量注入敏感配置。
+</p>

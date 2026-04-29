@@ -1,0 +1,117 @@
+<h2>数据模型设计</h2>
+<p class="subtitle">PostgreSQL 表结构设计</p>
+
+<div class="mockup">
+  <div class="mockup-header">数据库表结构</div>
+  <div class="mockup-body" style="padding: 20px; background: #f8f9fa;">
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+      <!-- 数据源组表 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #1976d2; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📊 source_groups（数据源分组）
+        </div>
+        <div style="padding: 15px;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <tr style="background: #f5f5f5;"><th style="padding: 8px; text-align: left;">字段</th><th style="padding: 8px; text-align: left;">类型</th><th style="padding: 8px; text-align: left;">说明</th></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID</td><td style="padding: 8px; border-bottom: 1px solid #eee;">主键</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">name</td><td style="padding: 8px; border-bottom: 1px solid #eee;">VARCHAR(100)</td><td style="padding: 8px; border-bottom: 1px solid #eee;">分组名称（如：热榜组、社交账号组）</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">collect_interval</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">采集频率（分钟）</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">is_active</td><td style="padding: 8px; border-bottom: 1px solid #eee;">BOOLEAN</td><td style="padding: 8px; border-bottom: 1px solid #eee;">是否启用</td></tr>
+            <tr><td style="padding: 8px;">created_at, updated_at</td><td style="padding: 8px;">TIMESTAMP</td><td style="padding: 8px;">时间戳</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- 数据源表 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #f57c00; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          🔗 data_sources（数据源配置）
+        </div>
+        <div style="padding: 15px;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <tr style="background: #f5f5f5;"><th style="padding: 8px; text-align: left;">字段</th><th style="padding: 8px; text-align: left;">类型</th><th style="padding: 8px; text-align: left;">说明</th></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID</td><td style="padding: 8px; border-bottom: 1px solid #eee;">主键</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">group_id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID FK</td><td style="padding: 8px; border-bottom: 1px solid #eee;">所属分组</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">name</td><td style="padding: 8px; border-bottom: 1px solid #eee;">VARCHAR(100)</td><td style="padding: 8px; border-bottom: 1px solid #eee;">数据源名称</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">type</td><td style="padding: 8px; border-bottom: 1px solid #eee;">ENUM</td><td style="padding: 8px; border-bottom: 1px solid #eee;">类型：hotlist/account/video/custom</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">collector_type</td><td style="padding: 8px; border-bottom: 1px solid #eee;">ENUM</td><td style="padding: 8px; border-bottom: 1px solid #eee;">采集器类型：configurable/plugin</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">config</td><td style="padding: 8px; border-bottom: 1px solid #eee;">JSONB</td><td style="padding: 8px; border-bottom: 1px solid #eee;">采集配置（URL、解析规则等）</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">priority</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">优先级（1-10）</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">is_active</td><td style="padding: 8px; border-bottom: 1px solid #eee;">BOOLEAN</td><td style="padding: 8px; border-bottom: 1px solid #eee;">是否启用</td></tr>
+            <tr><td style="padding: 8px;">status</td><td style="padding: 8px;">ENUM</td><td style="padding: 8px;">状态：active/paused/error</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- 采集线索表 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #388e3c; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📰 clues（采集线索数据）
+        </div>
+        <div style="padding: 15px;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <tr style="background: #f5f5f5;"><th style="padding: 8px; text-align: left;">字段</th><th style="padding: 8px; text-align: left;">类型</th><th style="padding: 8px; text-align: left;">说明</th></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID</td><td style="padding: 8px; border-bottom: 1px solid #eee;">主键</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">source_id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID FK</td><td style="padding: 8px; border-bottom: 1px solid #eee;">数据源ID</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">title</td><td style="padding: 8px; border-bottom: 1px solid #eee;">VARCHAR(500)</td><td style="padding: 8px; border-bottom: 1px solid #eee;">标题/内容摘要</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">url</td><td style="padding: 8px; border-bottom: 1px solid #eee;">TEXT</td><td style="padding: 8px; border-bottom: 1px solid #eee;">原始链接</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">cover_image</td><td style="padding: 8px; border-bottom: 1px solid #eee;">TEXT</td><td style="padding: 8px; border-bottom: 1px solid #eee;">图片/视频封面URL</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">author</td><td style="padding: 8px; border-bottom: 1px solid #eee;">VARCHAR(100)</td><td style="padding: 8px; border-bottom: 1px solid #eee;">作者信息（社交账号类）</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">rank</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">排名（热榜类）</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">heat_value</td><td style="padding: 8px; border-bottom: 1px solid #eee;">VARCHAR(100)</td><td style="padding: 8px; border-bottom: 1px solid #eee;">热度值（如：1.2亿、500万）</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">likes</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">点赞数</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">comments</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">评论数</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">shares</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">转发/分享数</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">tags</td><td style="padding: 8px; border-bottom: 1px solid #eee;">JSONB</td><td style="padding: 8px; border-bottom: 1px solid #eee;">话题标签数组</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">collected_at</td><td style="padding: 8px; border-bottom: 1px solid #eee;">TIMESTAMP</td><td style="padding: 8px; border-bottom: 1px solid #eee;">采集时间</td></tr>
+            <tr><td style="padding: 8px;">unique_hash</td><td style="padding: 8px;">VARCHAR(64)</td><td style="padding: 8px;">去重哈希（标题URL组合MD5）</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- 热榜变化历史表 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #7b1fa2; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📈 hotlist_history（热榜变化历史）
+        </div>
+        <div style="padding: 15px;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <tr style="background: #f5f5f5;"><th style="padding: 8px; text-align: left;">字段</th><th style="padding: 8px; text-align: left;">类型</th><th style="padding: 8px; text-align: left;">说明</th></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID</td><td style="padding: 8px; border-bottom: 1px solid #eee;">主键</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">clue_id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID FK</td><td style="padding: 8px; border-bottom: 1px solid #eee;">关联线索</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">change_type</td><td style="padding: 8px; border-bottom: 1px solid #eee;">ENUM</td><td style="padding: 8px; border-bottom: 1px solid #eee;">变化类型：new/rank_up/rank_down/off</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">old_rank</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">旧排名</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">new_rank</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">新排名</td></tr>
+            <tr><td style="padding: 8px;">recorded_at</td><td style="padding: 8px;">TIMESTAMP</td><td style="padding: 8px;">记录时间</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- 采集日志表 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #d32f2f; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📝 collect_logs（采集执行日志）
+        </div>
+        <div style="padding: 15px;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <tr style="background: #f5f5f5;"><th style="padding: 8px; text-align: left;">字段</th><th style="padding: 8px; text-align: left;">类型</th><th style="padding: 8px; text-align: left;">说明</th></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID</td><td style="padding: 8px; border-bottom: 1px solid #eee;">主键</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">source_id</td><td style="padding: 8px; border-bottom: 1px solid #eee;">UUID FK</td><td style="padding: 8px; border-bottom: 1px solid #eee;">数据源ID</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">status</td><td style="padding: 8px; border-bottom: 1px solid #eee;">ENUM</td><td style="padding: 8px; border-bottom: 1px solid #eee;">状态：success/failed/partial</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">items_count</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">采集条数</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">error_type</td><td style="padding: 8px; border-bottom: 1px solid #eee;">VARCHAR(50)</td><td style="padding: 8px; border-bottom: 1px solid #eee;">错误类型（如：timeout、blocked、parse_error）</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">error_message</td><td style="padding: 8px; border-bottom: 1px solid #eee;">TEXT</td><td style="padding: 8px; border-bottom: 1px solid #eee;">错误详情</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">retry_count</td><td style="padding: 8px; border-bottom: 1px solid #eee;">INTEGER</td><td style="padding: 8px; border-bottom: 1px solid #eee;">重试次数</td></tr>
+            <tr><td style="padding: 8px;">started_at, finished_at</td><td style="padding: 8px;">TIMESTAMP</td><td style="padding: 8px;">开始/结束时间</td></tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 15px; color: #666;">
+<b>表关系说明：</b> source_groups → data_sources（一对多）→ clues（一对多）→ hotlist_history（一对多）。collect_logs 独立记录每次采集执行情况。
+</p>

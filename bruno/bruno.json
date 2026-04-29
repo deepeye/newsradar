@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "name": "NewsRadar API",
+  "type": "collection",
+  "env": {
+    "API_URL": "http://localhost:8000"
+  }
+}

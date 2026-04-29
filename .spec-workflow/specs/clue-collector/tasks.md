@@ -1,0 +1,219 @@
+# 线索采集服务 - 任务分解
+
+## 项目初始化
+
+- [ ] 1. 初始化项目结构和基础配置
+  - 文件: `clue-collector/` 目录结构创建
+  - 创建 requirements.txt、Dockerfile、docker-compose.yml
+  - 配置 pyproject.toml 或 setup.py
+  - 创建 config/settings.yaml 基础配置
+  - _Requirements: 部署配置
+  - _Prompt: Role: Python DevOps Engineer | Task: 创建线索采集服务的完整项目结构，包括 Dockerfile、docker-compose.yml、requirements.txt 和基础配置目录 | Restrictions: 使用 Python 3.12，PostgreSQL 15，Redis 7，遵循设计文档的技术栈 | Success: 项目可以通过 docker-compose up 启动，基础容器运行正常
+
+## 数据层
+
+- [ ] 2. 创建数据库模型和迁移
+  - 文件: `app/storage/models.py`, `migrations/`
+  - 实现 SQLAlchemy 模型: SourceGroup, DataSource, Clue, HotlistHistory, CollectLog
+  - 创建 Alembic 迁移脚本
+  - 添加数据库连接配置
+  - _Requirements: 数据模型
+  - _Prompt: Role: Database Engineer | Task: 使用 SQLAlchemy 2.0 实现所有数据模型，包括 source_groups、data_sources、clues、hotlist_history、collect_logs，并配置 Alembic 迁移 | Restrictions: 使用 asyncpg 异步驱动，模型需支持 JSONB 字段，遵循设计文档的字段定义 | Success: 模型可以成功迁移，数据库表结构正确
+
+- [ ] 3. 实现数据访问层 (Storage)
+  - 文件: `app/storage/repository.py`
+  - 实现各模型的 CRUD 操作
+  - 添加批量插入和去重逻辑
+  - 实现线索去重查询（基于 unique_hash）
+  - _Requirements: 数据模型
+  - _Prompt: Role: Backend Developer | Task: 实现数据访问层，包含 SourceGroupRepository、DataSourceRepository、ClueRepository 等，支持批量插入和基于 unique_hash 的去重 | Restrictions: 使用异步 SQLAlchemy，遵循 Repository 模式 | Success: 所有 CRUD 操作正常，批量插入性能良好，去重逻辑正确
+
+## 反爬防护模块
+
+- [ ] 4. 实现 IP 轮换池
+  - 文件: `app/anti_crawl/ip_pool.py`
+  - 实现代理池 API 接入
+  - 添加 IP 健康检测机制
+  - 实现 Redis 缓存可用 IP 列表
+  - _Requirements: 反爬防护模块
+  - _Prompt: Role: Anti-Crawl Specialist | Task: 实现 IP 轮换池，支持外部代理 API 接入、健康检测、自动切换，可用 IP 缓存到 Redis | Restrictions: 实现 IP 可用性和响应速度检测，失败自动切换，Redis 存储可用 IP | Success: IP 池可以动态管理代理，自动剔除不可用 IP
+
+- [ ] 5. 实现 UA 轮换和 Cookie 池
+  - 文件: `app/anti_crawl/ua_rotator.py`, `app/anti_crawl/cookie_pool.py`
+  - 预置主流浏览器 UA 池
+  - 实现按平台匹配 UA
+  - 实现 Cookie 池管理（有效性检测、过期刷新、按数据源隔离）
+  - _Requirements: 反爬防护模块
+  - _Prompt: Role: Anti-Crawl Specialist | Task: 实现 UA 轮换器（预置主流 UA，按平台匹配）和 Cookie 池（Redis 存储、有效性检测、过期自动刷新、按数据源隔离） | Restrictions: UA 需覆盖移动端和桌面端主流浏览器，Cookie 需支持多数据源隔离 | Success: UA 和 Cookie 可以随机轮换，Cookie 过期能自动检测和切换
+
+- [ ] 6. 实现频率自适应模块
+  - 文件: `app/anti_crawl/rate_limiter.py`
+  - 实现默认请求间隔配置
+  - 检测到 429/403 自动降频
+  - 正常后逐步恢复频率
+  - _Requirements: 反爬防护模块
+  - _Prompt: Role: Anti-Crawl Specialist | Task: 实现频率自适应模块，支持配置默认间隔，检测限流状态码（429/403）自动降频，成功后逐步恢复 | Restrictions: 降频幅度 50%，成功 5 次后恢复，添加随机延迟 | Success: 频率可以动态调整，遇到限流自动降频，正常后恢复
+
+- [ ] 7. 整合反爬模块统一入口
+  - 文件: `app/anti_crawl/__init__.py`, `app/anti_crawl/manager.py`
+  - 创建 AntiCrawlModule 统一接口
+  - 整合 IP、UA、Cookie、频率控制
+  - _Requirements: 反爬防护模块
+  - _Prompt: Role: Software Architect | Task: 整合 IP 池、UA 轮换、Cookie 池、频率控制为统一的 AntiCrawlModule 接口 | Restrictions: 提供简洁的 API 供采集器调用，支持配置化启用/禁用各模块 | Success: AntiCrawlModule 接口简洁，各子模块协同工作
+
+## 采集器模块
+
+- [ ] 8. 实现配置化采集器基础框架
+  - 文件: `app/collectors/configurable.py`, `app/collectors/base.py`
+  - 实现 BaseCollector 抽象基类
+  - 实现 ConfigurableCollector 配置化采集器
+  - 支持 CSS 选择器、JSON API、XPath 解析
+  - _Requirements: 采集器设计-配置化采集器
+  - _Prompt: Role: Web Scraping Engineer | Task: 实现配置化采集器框架，支持通过 JSON 配置定义采集规则（URL、方法、解析类型、解析规则），支持 CSS、JSON、XPath 解析 | Restrictions: 基于 Scrapling 框架，配置需包含 container、title、rank、heat、link 等字段映射 | Success: 可以通过配置采集微博热搜、知乎热榜等标准热榜页面
+
+- [ ] 9. 实现插件化采集器框架
+  - 文件: `app/collectors/plugins/base.py`, `app/collectors/plugin_manager.py`
+  - 实现插件基类 BaseCollectorPlugin
+  - 实现插件注册和加载机制
+  - 支持动态加载自定义插件
+  - _Requirements: 采集器设计-插件化采集器
+  - _Prompt: Role: Software Architect | Task: 实现插件化采集器框架，支持自定义插件继承 BaseCollector，实现 collect 和 validate 方法，支持动态加载 | Restrictions: 插件需处理登录态、Cookie 管理、动态渲染，提供插件注册机制 | Success: 可以加载自定义插件，插件生命周期管理正常
+
+- [ ] 10. 集成 Scrapling 框架适配器
+  - 文件: `app/collectors/adaptors/scrapling.py`, `app/collectors/adaptors/playwright.py`
+  - 实现 FetchAdaptor（配置化采集）
+  - 实现 PlaywrightAdaptor（插件化采集，隐身模式）
+  - _Requirements: 采集器设计-Scrapling 框架集成
+  - _Prompt: Role: Web Scraping Engineer | Task: 集成 Scrapling 框架，实现 FetchAdaptor 用于配置化采集（自动适应页面变化），PlaywrightAdaptor 用于插件化采集（隐身模式+动态渲染） | Restrictions: FetchAdaptor 使用自适应抓取，PlaywrightAdaptor 支持动态页面渲染 | Success: 两个适配器可以正常工作，FetchAdaptor 自适应变化，Playwright 渲染动态内容
+
+## 调度器模块
+
+- [ ] 11. 实现 Redis 任务队列
+  - 文件: `app/scheduler/task_queue.py`
+  - 实现优先级队列
+  - 实现失败重试队列
+  - 实现任务超时处理
+  - _Requirements: 调度器设计
+  - _Prompt: Role: Backend Engineer | Task: 实现基于 Redis 的任务队列，支持优先级排序、失败重试队列、任务超时处理 | Restrictions: 使用 Redis 列表/有序集合实现，支持任务优先级，超时任务自动处理 | Success: 任务可以按优先级消费，失败任务进入重试队列，超时任务被标记
+
+- [ ] 12. 实现分组调度器 (Scheduler)
+  - 文件: `app/scheduler/scheduler.py`
+  - 实现分组扫描逻辑
+  - 实现触发判断（should_trigger）
+  - 实现任务创建（create_tasks）
+  - 主循环每分钟扫描
+  - _Requirements: 调度器设计
+  - _Prompt: Role: Backend Engineer | Task: 实现分组调度器，每分钟扫描 source_groups，根据 collect_interval 判断是否触发采集，创建采集任务 | Restrictions: 支持热榜组（5分钟）、社交账号组（30分钟）、短视频组（30分钟）等不同频率 | Success: 调度器按配置频率触发，任务创建正确
+
+- [ ] 13. 实现任务执行器 (TaskRunner)
+  - 文件: `app/scheduler/task_runner.py`
+  - 实现队列消费循环
+  - 实现单个任务执行（execute_task）
+  - 集成采集器执行采集
+  - 存储结果并更新状态
+  - _Requirements: 调度器设计
+  - _Prompt: Role: Backend Engineer | Task: 实现任务执行器，消费 Redis 队列，调用对应采集器执行采集，存储结果到数据库 | Restrictions: 支持配置化和插件化两种采集器，任务执行有完整日志 | Success: Worker 可以消费任务，采集器正确执行，结果存储成功
+
+## 异常处理模块
+
+- [ ] 14. 实现错误分类和处理策略
+  - 文件: `app/error_handler/error_classifier.py`
+  - 实现错误类型定义（network_timeout, connection_error, blocked_ip, parse_error, cookie_expired, source_unavailable）
+  - 实现错误分类逻辑
+  - _Requirements: 异常处理模块
+  - _Prompt: Role: Backend Engineer | Task: 实现错误分类器，定义所有错误类型，根据异常特征自动分类 | Restrictions: 覆盖网络超时、连接失败、IP 被封、解析失败、Cookie 过期、源站不可用等场景 | Success: 错误可以正确分类，分类逻辑覆盖所有预期场景
+
+- [ ] 15. 实现重试和降级策略
+  - 文件: `app/error_handler/retry_handler.py`, `app/error_handler/degradation.py`
+  - 实现指数退避重试策略
+  - 实现 IP 降级（连续3次被封标记不可用）
+  - 实现频率降级（429 降低50%频率）
+  - 实现数据源降级（连续5次失败暂停采集）
+  - _Requirements: 异常处理模块
+  - _Prompt: Role: Backend Engineer | Task: 实现重试策略（最大3次，指数退避 5s→10s→20s）和降级策略（IP降级、频率降级、数据源降级） | Restrictions: 只有特定错误可重试，降级触发条件准确，恢复机制正常 | Success: 重试逻辑正确，降级策略按条件触发，系统可以自动恢复
+
+- [ ] 16. 实现告警机制
+  - 文件: `app/error_handler/alerts.py`
+  - 实现告警触发条件判断
+  - 支持日志、邮件、Webhook（企业微信/钉钉）、Slack 告警
+  - _Requirements: 异常处理模块
+  - _Prompt: Role: DevOps Engineer | Task: 实现告警模块，支持多种告警渠道（日志、邮件、Webhook），按触发条件发送告警 | Restrictions: 告警触发条件：连续5次失败、状态变更、解析规则失效、代理池不足、Cookie 池失效 | Success: 告警按条件触发，各渠道告警发送正常
+
+## 服务入口和配置
+
+- [ ] 17. 实现配置管理系统
+  - 文件: `app/config.py`
+  - 实现 YAML 配置加载
+  - 实现环境变量覆盖
+  - 使用 Pydantic 验证配置
+  - _Requirements: 系统架构
+  - _Prompt: Role: Backend Engineer | Task: 实现配置管理系统，支持 YAML 配置（settings.yaml、proxy_providers.yaml）和环境变量，使用 Pydantic 验证 | Restrictions: 配置项包含数据库、Redis、代理、采集频率等 | Success: 配置可以正确加载和验证，环境变量可以覆盖
+
+- [ ] 18. 实现服务入口和主循环
+  - 文件: `app/main.py`
+  - 实现服务启动逻辑
+  - 集成 Scheduler 和 TaskRunner
+  - 添加优雅关闭处理
+  - _Requirements: 系统架构
+  - _Prompt: Role: Backend Engineer | Task: 实现服务入口 main.py，初始化所有组件，启动 Scheduler 和 TaskRunner，支持优雅关闭 | Restrictions: 使用 asyncio，组件初始化顺序正确，信号处理完善 | Success: 服务可以正常启动和关闭，调度器和执行器协同工作
+
+- [ ] 19. 实现结构化日志
+  - 文件: `app/utils/logger.py`
+  - 集成 structlog
+  - 配置日志格式和级别
+  - 支持 JSON 格式输出
+  - _Requirements: 依赖库
+  - _Prompt: Role: Backend Engineer | Task: 集成 structlog 实现结构化日志，配置适当的格式和级别，支持 JSON 输出 | Restrictions: 日志包含请求ID、组件名、操作类型等上下文 | Success: 日志结构化输出，便于日志收集和分析
+
+## 测试和部署
+
+- [ ] 20. 编写单元测试
+  - 文件: `tests/unit/`
+  - 为各模块编写单元测试
+  - 使用 pytest-asyncio 测试异步代码
+  - 使用 mocks 隔离外部依赖
+  - _Requirements: 全部
+  - _Prompt: Role: QA Engineer | Task: 为各核心模块编写单元测试，使用 pytest 和 pytest-asyncio，对外部依赖（数据库、Redis、HTTP）使用 mock | Restrictions: 测试覆盖率 > 70%，关键路径必须覆盖 | Success: 单元测试通过，覆盖核心逻辑
+
+- [ ] 21. 编写集成测试
+  - 文件: `tests/integration/`
+  - 测试完整采集流程
+  - 测试调度器和执行器协同
+  - 测试数据库和 Redis 集成
+  - _Requirements: 全部
+  - _Prompt: Role: QA Engineer | Task: 编写集成测试，测试完整采集流程，验证各模块协同工作 | Restrictions: 使用测试数据库和 Redis 实例，测试容器化部署 | Success: 集成测试通过，验证端到端流程
+
+- [ ] 22. 完善部署配置和文档
+  - 文件: `docker-compose.yml`, `README.md`
+  - 完善 Docker Compose 配置
+  - 添加健康检查
+  - 编写 README 使用文档
+  - _Requirements: 部署配置
+  - _Prompt: Role: DevOps Engineer | Task: 完善部署配置，添加服务健康检查，编写完整的使用文档 | Restrictions: 包含启动、配置、监控、故障排查等章节 | Success: 可以通过 README 完成部署和运维
+
+## 附：任务依赖关系
+
+```
+1. 项目初始化
+   └── 2. 数据模型
+       └── 3. 数据访问层
+           ├── 4. IP池 ───┐
+           ├── 5. UA/Cookie ─┤
+           ├── 6. 频率控制 ─┼── 7. AntiCrawlModule
+           │                │
+           ├── 8. 配置化采集器 ─┐
+           ├── 9. 插件化采集器 ─┼── 10. Scrapling适配器
+           │                    │
+           ├── 11. 任务队列 ────┤
+           ├── 12. 调度器 ──────┼── 13. TaskRunner
+           │                    │
+           ├── 14. 错误分类 ──┐
+           ├── 15. 重试降级 ──┼── 16. 告警机制
+           │                  │
+           ├── 17. 配置管理 ──┐
+           ├── 18. 服务入口 ──┼── 19. 结构化日志
+                              │
+                              ├── 20. 单元测试
+                              ├── 21. 集成测试
+                              └── 22. 部署文档
+```

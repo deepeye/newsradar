@@ -1,0 +1,41 @@
+meta {
+  name: Create Bilibili Hotlist
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{API_URL}}/api/data-sources
+  body: json
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "groupId": "00000000-0000-0000-0000-000000000001",
+    "name": "B站热搜",
+    "type": "hotlist",
+    "collectorType": "configurable",
+    "config": {
+      "url": "https://www.bilibili.com/v/popular/rank/all",
+      "method": "GET",
+      "usePlaywright": true,
+      "timeout": 30000,
+      "waitForSelector": ".rank-item",
+      "parseType": "css",
+      "parseRules": {
+        "container": ".rank-item",
+        "title": ".title",
+        "heat": ".data-box",
+        "link": "a@href"
+      }
+    },
+    "priority": 8,
+    "isActive": true
+  }
+}

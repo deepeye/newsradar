@@ -1,0 +1,81 @@
+<h2>线索采集服务 - 系统架构</h2>
+<p class="subtitle">单服务 + 内置调度架构</p>
+
+<div class="mockup">
+  <div class="mockup-header">系统架构图</div>
+  <div class="mockup-body" style="padding: 20px; background: #f8f9fa;">
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+      <!-- 调度层 -->
+      <div style="background: #e3f2fd; border: 2px solid #1976d2; border-radius: 8px; padding: 15px;">
+        <div style="font-weight: bold; color: #1976d2; margin-bottom: 8px;">📋 调度器 Scheduler</div>
+        <div style="display: flex; gap: 10px; font-size: 13px;">
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">分组调度</span>
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">频率控制</span>
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">任务队列</span>
+        </div>
+      </div>
+
+      <!-- 采集引擎层 -->
+      <div style="display: flex; gap: 15px;">
+        <div style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; flex: 1;">
+          <div style="font-weight: bold; color: #f57c00; margin-bottom: 8px;">🔧 配置化采集器</div>
+          <div style="font-size: 12px; color: #666;">热榜类数据源</div>
+          <div style="display: flex; gap: 8px; margin-top: 8px; font-size: 12px;">
+            <span>微博热搜</span>
+            <span>知乎热榜</span>
+            <span>抖音热点</span>
+          </div>
+        </div>
+        <div style="background: #fce4ec; border: 2px solid #c2185b; border-radius: 8px; padding: 15px; flex: 1;">
+          <div style="font-weight: bold; color: #c2185b; margin-bottom: 8px;">🧩 插件化采集器</div>
+          <div style="font-size: 12px; color: #666;">复杂数据源</div>
+          <div style="display: flex; gap: 8px; margin-top: 8px; font-size: 12px;">
+            <span>社交账号</span>
+            <span>短视频</span>
+            <span>自定义源</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 反爬模块 -->
+      <div style="background: #e8f5e9; border: 2px solid #388e3c; border-radius: 8px; padding: 15px;">
+        <div style="font-weight: bold; color: #388e3c; margin-bottom: 8px;">🛡️ 反爬防护模块</div>
+        <div style="display: flex; gap: 10px; font-size: 13px;">
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">IP轮换池</span>
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">UA轮换</span>
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">Cookie池</span>
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">频率自适应</span>
+        </div>
+      </div>
+
+      <!-- 异常处理 -->
+      <div style="background: #ffebee; border: 2px solid #d32f2f; border-radius: 8px; padding: 15px;">
+        <div style="font-weight: bold; color: #d32f2f; margin-bottom: 8px;">⚡ 异常处理模块</div>
+        <div style="display: flex; gap: 10px; font-size: 13px;">
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">智能重试</span>
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">降级策略</span>
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">错误分类</span>
+          <span style="background: #fff; padding: 4px 8px; border-radius: 4px;">日志告警</span>
+        </div>
+      </div>
+
+      <!-- 数据存储层 -->
+      <div style="display: flex; gap: 15px;">
+        <div style="background: #f3e5f5; border: 2px solid #7b1fa2; border-radius: 8px; padding: 15px; flex: 1;">
+          <div style="font-weight: bold; color: #7b1fa2;">🐘 PostgreSQL</div>
+          <div style="font-size: 12px; margin-top: 5px;">数据源配置 + 采集数据</div>
+        </div>
+        <div style="background: #efebe9; border: 2px solid #5d4037; border-radius: 8px; padding: 15px; flex: 1;">
+          <div style="font-weight: bold; color: #5d4037;">🔴 Redis</div>
+          <div style="font-size: 12px; margin-top: 5px;">任务队列 + Cookie池 + 缓存</div>
+        </div>
+        <div style="background: #e0e0e0; border: 2px solid #616161; border-radius: 8px; padding: 15px; flex: 1;">
+          <div style="font-weight: bold; color: #616161;">🌐 代理服务</div>
+          <div style="font-size: 12px; margin-top: 5px;">外部代理池 API</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 15px; color: #666;">所有模块在单一 Python 服务中运行，通过函数调用协作。Redis 作为任务队列和缓存层，PostgreSQL 持久化配置和数据。</p>

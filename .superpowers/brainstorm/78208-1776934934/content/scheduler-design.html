@@ -1,0 +1,192 @@
+<h2>调度器设计</h2>
+<p class="subtitle">分组调度 + 任务队列 + 状态管理</p>
+
+<div class="mockup">
+  <div class="mockup-header">调度器架构</div>
+  <div class="mockup-body" style="padding: 20px; background: #f8f9fa;">
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+
+      <!-- 调度流程图 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #1976d2; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📋 调度流程图
+        </div>
+        <div style="padding: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div style="background: #e3f2fd; border: 2px solid #1976d2; padding: 10px 15px; border-radius: 8px; text-align: center;">
+              <div style="font-weight: bold;">分组扫描</div>
+              <div style="font-size: 11px; color: #666;">每分钟检查</div>
+            </div>
+            <div style="color: #1976d2; font-size: 20px;">→</div>
+            <div style="background: #fff3e0; border: 2px solid #f57c00; padding: 10px 15px; border-radius: 8px; text-align: center;">
+              <div style="font-weight: bold;">判断触发</div>
+              <div style="font-size: 11px; color: #666;">上次采集时间</div>
+            </div>
+            <div style="color: #f57c00; font-size: 20px;">→</div>
+            <div style="background: #e8f5e9; border: 2px solid #388e3c; padding: 10px 15px; border-radius: 8px; text-align: center;">
+              <div style="font-weight: bold;">创建任务</div>
+              <div style="font-size: 11px; color: #666;">推入Redis队列</div>
+            </div>
+            <div style="color: #388e3c; font-size: 20px;">→</div>
+            <div style="background: #fce4ec; border: 2px solid #c2185b; padding: 10px 15px; border-radius: 8px; text-align: center;">
+              <div style="font-weight: bold;">执行采集</div>
+              <div style="font-size: 11px; color: #666;">Worker消费</div>
+            </div>
+            <div style="color: #c2185b; font-size: 20px;">→</div>
+            <div style="background: #f3e5f5; border: 2px solid #7b1fa2; padding: 10px 15px; border-radius: 8px; text-align: center;">
+              <div style="font-weight: bold;">存储结果</div>
+              <div style="font-size: 11px; color: #666;">写入PostgreSQL</div>
+            </div>
+            <div style="color: #7b1fa2; font-size: 20px;">→</div>
+            <div style="background: #efebe9; border: 2px solid #5d4037; padding: 10px 15px; border-radius: 8px; text-align: center;">
+              <div style="font-weight: bold;">更新状态</div>
+              <div style="font-size: 11px; color: #666;">记录日志</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分组调度策略 -->
+      <div style="display: flex; gap: 15px;">
+        <div style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+          <div style="background: #f57c00; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+            📊 分组调度策略
+          </div>
+          <div style="padding: 15px;">
+            <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+              <tr style="background: #f5f5f5;"><th style="padding: 8px;">分组名称</th><th style="padding: 8px;">采集频率</th><th style="padding: 8px;">采集策略</th></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">热榜组</td><td style="padding: 8px; border-bottom: 1px solid #eee;">5 分钟</td><td style="padding: 8px; border-bottom: 1px solid #eee;">增量采集（追踪变化）</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">社交账号组</td><td style="padding: 8px; border-bottom: 1px solid #eee;">30 分钟</td><td style="padding: 8px; border-bottom: 1px solid #eee;">全量去重入库</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #eee;">短视频组</td><td style="padding: 8px; border-bottom: 1px solid #eee;">30 分钟</td><td style="padding: 8px; border-bottom: 1px solid #eee;">全量去重入库</td></tr>
+              <tr><td style="padding: 8px;">自定义源组</td><td style="padding: 8px;">可配置</td><td style="padding: 8px;">按数据源类型决定</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div style="flex: 1; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+          <div style="background: #388e3c; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+            🔴 Redis任务队列
+          </div>
+          <div style="padding: 15px;">
+            <pre style="font-size: 11px; background: #f5f5f5; padding: 10px; border-radius: 4px;">
+# 任务队列结构
+collect_queue = [
+  {
+    "task_id": "uuid",
+    "source_id": "source_uuid",
+    "priority": 8,
+    "created_at": timestamp,
+    "retry_count": 0
+  },
+  ...
+]
+
+# 优先级队列消费
+# 高优先级任务优先执行
+# 失败任务进入重试队列</pre>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+              <b>队列特性：</b> 支持优先级排序、失败重试、任务超时处理
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 调度器代码结构 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #7b1fa2; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          🧩 调度器核心代码结构
+        </div>
+        <div style="padding: 15px;">
+          <pre style="font-size: 11px; background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">
+class Scheduler:
+    """分组调度器"""
+
+    def __init__(self):
+        self.groups: Dict[str, SourceGroup] = {}
+        self.task_queue: RedisQueue
+        self.runner: TaskRunner
+        self.last_collect_times: Dict[str, datetime] = {}
+
+    async def run(self):
+        """主循环 - 每分钟扫描"""
+        while True:
+            for group in self.groups.values():
+                if self.should_trigger(group):
+                    tasks = self.create_tasks(group)
+                    await self.task_queue.push(tasks)
+            await asyncio.sleep(60)  # 每分钟检查一次
+
+    def should_trigger(self, group: SourceGroup) -> bool:
+        """判断是否需要触发采集"""
+        last_time = self.last_collect_times.get(group.id)
+        if not last_time:
+            return True
+        elapsed = datetime.now() - last_time
+        return elapsed >= timedelta(minutes=group.collect_interval)
+
+    def create_tasks(self, group: SourceGroup) -> List[Task]:
+        """为分组内所有数据源创建采集任务"""
+        return [
+            Task(source_id=source.id, priority=source.priority)
+            for source in group.sources
+            if source.is_active and source.status != 'paused'
+        ]
+
+class TaskRunner:
+    """任务执行器"""
+
+    async def run(self):
+        """消费队列并执行"""
+        while True:
+            task = await self.task_queue.pop()
+            await self.execute_task(task)
+
+    async def execute_task(self, task: Task):
+        """执行单个采集任务"""
+        source = await self.get_source(task.source_id)
+        collector = self.get_collector(source)
+        result = await collector.collect(source, self.anti_crawl)
+        await self.store_result(result, source)
+        await self.log_execution(task, result)</pre>
+        </div>
+      </div>
+
+      <!-- 状态管理 -->
+      <div style="border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="background: #d32f2f; color: #fff; padding: 10px 15px; font-weight: bold; border-radius: 8px 8px 0 0;">
+          📝 状态管理
+        </div>
+        <div style="padding: 15px; display: flex; gap: 15px;">
+          <div style="flex: 1;">
+            <div style="font-weight: bold; margin-bottom: 8px;">数据源状态流转：</div>
+            <div style="display: flex; gap: 8px; font-size: 12px;">
+              <span style="background: #c8e6c9; padding: 6px 10px; border-radius: 4px;">active</span>
+              <span style="color: #666;">→</span>
+              <span style="background: #fff9c4; padding: 6px 10px; border-radius: 4px;">error</span>
+              <span style="color: #666;">→</span>
+              <span style="background: #ffcdd2; padding: 6px 10px; border-radius: 4px;">paused</span>
+              <span style="color: #666;">→</span>
+              <span style="background: #c8e6c9; padding: 6px 10px; border-radius: 4px;">active</span>
+            </div>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: bold; margin-bottom: 8px;">调度器状态监控：</div>
+            <div style="font-size: 12px; color: #666;">
+              <ul style="margin: 0; padding-left: 15px;">
+                <li>任务队列长度</li>
+                <li>当前执行任务数</li>
+                <li>成功率统计</li>
+                <li>平均采集耗时</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 15px; color: #666;">
+<b>调度特点：</b> 分组统一频率管理，组内数据源按优先级排序。热榜组高频采集追踪变化，社交账号/短视频组低频采集全量去重。
+</p>

@@ -1,0 +1,10 @@
+{"type":"server-started","port":52964,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:52964","screen_dir":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content","state_dir":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/state"}
+{"type":"screen-added","file":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content/architecture.html"}
+{"type":"screen-added","file":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content/data-model.html"}
+{"type":"screen-added","file":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content/collector-design.html"}
+{"type":"screen-added","file":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content/anti-crawl-design.html"}
+{"type":"screen-added","file":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content/scheduler-design.html"}
+{"type":"screen-added","file":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content/error-handling-design.html"}
+{"type":"screen-added","file":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content/project-structure.html"}
+{"type":"screen-added","file":"/Users/felixwang/devspace/cc-project/cqh-agent/.superpowers/brainstorm/78208-1776934934/content/waiting.html"}
+{"type":"server-stopped","reason":"idle timeout"}
