@@ -41,9 +41,12 @@
 # timeout: 超时时间（毫秒）
 # wait_for_selector: 等待特定元素的选择器
 
-# ==================== 微博 KOL 示例 ====================
-# 北京头条: https://weibo.com/u/1644948230
-# 环球时报: https://weibo.com/u/1974576991
-# 澎湃新闻: https://weibo.com/u/5044281310
-# 新京报: https://weibo.com/u/1644114654
-# 南方都市报: https://weibo.com/u/1644489953
+# ==================== 热榜数据源 ====================
+# 百度热搜: https://top.baidu.com/board?tab=realtime (CSS解析)
+# 知乎热榜: https://www.zhihu.com/hot (Playwright动态渲染)
+# 微博热搜: https://weibo.com/hot/search (Playwright动态渲染)
+# 抖音热榜: https://www.douyin.com/hot (Playwright动态渲染)
+# B站热搜: https://www.bilibili.com/v/popular/rank/all (Playwright动态渲染)
+# 快手热榜: https://tophub.today/n/MZd7PrPerO (聚合平台)
+# 头条热榜: https://tophub.today/n/x9ozB4KoXb (聚合平台)
+# 微信热文榜: https://tophub.today/n/WnBe01o371 (聚合平台)
