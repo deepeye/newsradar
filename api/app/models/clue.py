@@ -21,6 +21,8 @@ class Clue(Base):
         PG_UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
+    original_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    translated_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     cover_image: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     author: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

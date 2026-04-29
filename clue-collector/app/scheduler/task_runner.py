@@ -9,6 +9,7 @@ from app.storage.repository import DataSourceRepository, ClueRepository, Collect
 from app.storage.models import DataSource, CollectStatus, DataSourceType, CollectorType
 from app.collectors import ConfigurableCollector
 from app.anti_crawl import anti_crawl
+from app.services.translation_service import translation_service
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -109,9 +110,25 @@ class TaskRunner:
                     saved_count = 0
 
                     for item in result.items:
+                        # 翻译非中文内容
+                        original_title = item.title
+                        translated_title = None
+
+                        if original_title and not translation_service._is_chinese(original_title):
+                            translated_title = await translation_service.translate(original_title)
+                            if translated_title:
+                                item.original_content = original_title
+                                item.translated_content = translated_title
+                                item.title = translated_title
+                                logger.debug("content_translated",
+                                           original=original_title[:50],
+                                           translated=translated_title[:50])
+
                         clue, is_new = await clue_repo.create_or_update(
                             source_id=source_id,
                             title=item.title,
+                            original_content=item.original_content,
+                            translated_content=item.translated_content,
                             url=item.url,
                             cover_image=item.cover_image,
                             author=item.author,

@@ -176,6 +176,14 @@ class Clue(Base):
         String(500), nullable=False,
         comment="标题/内容摘要"
     )
+    original_content: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True,
+        comment="原始内容（非中文原文）"
+    )
+    translated_content: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True,
+        comment="翻译后的中文内容"
+    )
     url: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True,
         comment="原始链接"

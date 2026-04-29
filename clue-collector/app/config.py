@@ -49,6 +49,18 @@ class AlertConfig(BaseSettings):
     channels: list = Field(default_factory=lambda: ['log'])
 
 
+class TranslationConfig(BaseSettings):
+    """翻译配置"""
+    model_config = SettingsConfigDict(env_prefix='TRANSLATION_')
+
+    enabled: bool = True
+    api_key: str = Field(alias='QWEN_API_KEY', default="")
+    api_base: str = Field(alias='QWEN_API_BASE', default="https://dashscope.aliyuncs.com/compatible-mode/v1")
+    model: str = "qwen-plus"
+    max_length: int = 2000
+    timeout: int = 30
+
+
 class AppConfig(BaseSettings):
     """应用配置"""
     name: str = "clue-collector"
@@ -70,6 +82,7 @@ class Settings(BaseSettings):
     anti_crawl: AntiCrawlConfig = Field(default_factory=AntiCrawlConfig)
     scheduler: SchedulerConfig = Field(default_factory=SchedulerConfig)
     alerts: AlertConfig = Field(default_factory=AlertConfig)
+    translation: TranslationConfig = Field(default_factory=TranslationConfig)
 
 
 

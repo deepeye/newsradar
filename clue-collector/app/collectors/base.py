@@ -12,6 +12,8 @@ from app.anti_crawl import AntiCrawlModule
 class ClueData:
     """采集线索数据"""
     title: str
+    original_content: Optional[str] = None
+    translated_content: Optional[str] = None
     url: Optional[str] = None
     cover_image: Optional[str] = None
     author: Optional[str] = None
