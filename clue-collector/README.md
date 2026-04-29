@@ -35,14 +35,14 @@ vim .env
 ### 2. 启动服务
 
 ```bash
-cd docker
-docker compose up -d
+# 从项目根目录启动（docker-compose.yml 位于 docker/ 目录）
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 ### 3. 查看日志
 
 ```bash
-docker compose logs -f clue-collector
+docker compose -f docker/docker-compose.yml logs -f collector
 ```
 
 ## 项目结构
@@ -79,9 +79,6 @@ clue-collector/
 │       └── logger.py           # 结构化日志
 ├── migrations/                 # 数据库迁移
 ├── tests/                      # 测试
-├── docker/                     # Docker配置
-│   ├── Dockerfile
-│   └── docker-compose.yml
 ├── config/                     # 配置文件
 │   ├── settings.yaml
 │   └── proxy_providers.yaml

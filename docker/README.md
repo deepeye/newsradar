@@ -3,17 +3,17 @@
 ## 快速启动
 
 ```bash
-# 1. 创建环境变量文件
+# 1. 创建环境变量文件（从项目根目录运行）
 cp docker/.env.example .env
 
 # 2. 编辑 .env 文件，填入 QWEN_API_KEY
 vim .env
 
 # 3. 启动所有服务
-docker compose up -d
+docker compose -f docker/docker-compose.yml up -d
 
 # 4. 查看服务状态
-docker compose ps
+docker compose -f docker/docker-compose.yml ps
 ```
 
 ## 服务列表
@@ -30,45 +30,45 @@ docker compose ps
 
 ```bash
 # 仅启动基础设施
-docker compose up -d postgres redis
+docker compose -f docker/docker-compose.yml up -d postgres redis
 
 # 仅启动前端
-docker compose up -d web
+docker compose -f docker/docker-compose.yml up -d web
 
 # 仅启动 API
-docker compose up -d api
+docker compose -f docker/docker-compose.yml up -d api
 
 # 仅启动爬虫
-docker compose up -d collector
+docker compose -f docker/docker-compose.yml up -d collector
 ```
 
 ## 停止服务
 
 ```bash
-docker compose down
+docker compose -f docker/docker-compose.yml down
 
 # 停止并删除数据卷
-docker compose down -v
+docker compose -f docker/docker-compose.yml down -v
 ```
 
 ## 查看日志
 
 ```bash
 # 所有服务日志
-docker compose logs -f
+docker compose -f docker/docker-compose.yml logs -f
 
 # 单个服务日志
-docker compose logs -f api
-docker compose logs -f web
-docker compose logs -f collector
+docker compose -f docker/docker-compose.yml logs -f api
+docker compose -f docker/docker-compose.yml logs -f web
+docker compose -f docker/docker-compose.yml logs -f collector
 ```
 
 ## 重新构建
 
 ```bash
 # 重新构建所有服务
-docker compose build --no-cache
+docker compose -f docker/docker-compose.yml build --no-cache
 
 # 重新构建单个服务
-docker compose build --no-cache api
+docker compose -f docker/docker-compose.yml build --no-cache api
 ```

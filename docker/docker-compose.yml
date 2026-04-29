@@ -2,8 +2,8 @@ services:
   # ==================== 前端 ====================
   web:
     build:
-      context: web
-      dockerfile: ../docker/web.Dockerfile
+      context: ../web
+      dockerfile: web.Dockerfile
     container_name: newsradar-web
     ports:
       - "3000:3000"
@@ -19,8 +19,8 @@ services:
   # ==================== API 服务 ====================
   api:
     build:
-      context: api
-      dockerfile: ../docker/api.Dockerfile
+      context: ../api
+      dockerfile: api.Dockerfile
     container_name: newsradar-api
     ports:
       - "8001:8001"
@@ -43,8 +43,8 @@ services:
   # ==================== 爬虫服务 ====================
   collector:
     build:
-      context: clue-collector
-      dockerfile: ../docker/clue-collector.Dockerfile
+      context: ../clue-collector
+      dockerfile: clue-collector.Dockerfile
     container_name: newsradar-collector
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/newsradar
