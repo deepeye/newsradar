@@ -86,7 +86,7 @@ class Scheduler:
                 source_id=str(source.id),
                 priority=source.priority,
                 metadata={
-                    "collector_type": source.collector_type.value,
+                    "collector_type": source.collector_type,
                     "source_type": source.type.value,
                     "config": source.config
                 }
@@ -102,10 +102,36 @@ class Scheduler:
         if not group.is_active:
             return False
 
-        # 检查是否达到采集间隔
-        interval = timedelta(minutes=group.collect_interval)
         now = datetime.now(timezone.utc)
+
+        # 定时模式：schedule_time 设置后忽略 collect_interval
+        if group.schedule_time:
+            return self._should_trigger_by_schedule(group, now)
+
+        # 间隔模式
+        interval = timedelta(minutes=group.collect_interval)
         if now - group.updated_at >= interval:
+            return True
+
+        return False
+
+    def _should_trigger_by_schedule(self, group: SourceGroup, now: datetime) -> bool:
+        """判断定时模式是否应该触发（北京时间 HH:MM）"""
+        try:
+            hour, minute = map(int, group.schedule_time.split(":"))
+        except (ValueError, AttributeError):
+            return False
+
+        # 北京时间 UTC+8
+        cst_now = now + timedelta(hours=8)
+        target = cst_now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+        # 在目标时间前后2分钟窗口内触发，且今天尚未触发过
+        if abs((cst_now - target).total_seconds()) <= 120:
+            # 检查上次触发是否在今天（北京时间）
+            last_cst = group.updated_at + timedelta(hours=8) if group.updated_at else None
+            if last_cst and last_cst.date() == cst_now.date():
+                return False
             return True
 
         return False

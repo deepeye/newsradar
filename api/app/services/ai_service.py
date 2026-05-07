@@ -134,6 +134,7 @@ class AIService:
 
 ## 输出要求
 以 JSON 对象格式输出，包含以下字段：
+- title: 选题标题（简洁有力，20字内）
 - summary: 概要描述（100字内）
 - urgency: 紧急程度（高/中/低）
 - info_density: 信息密度评分（0-100整数）
@@ -200,14 +201,17 @@ class AIService:
         }
         payload = {
             "model": self.model,
-            "input": {"prompt": prompt},
-            "parameters": {"result_format": "text"},
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
         }
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
+                # OpenAI compatible endpoint requires /chat/completions path
+                api_url = f"{self.base_url.rstrip('/')}/chat/completions"
                 response = await client.post(
-                    self.base_url, headers=headers, json=payload
+                    api_url, headers=headers, json=payload
                 )
 
                 if response.status_code == 429:
@@ -217,7 +221,7 @@ class AIService:
 
                 response.raise_for_status()
                 data = response.json()
-                return data["output"]["text"]
+                return data["choices"][0]["message"]["content"]
 
         except httpx.TimeoutException:
             raise AIServiceTimeoutError("Qwen API timeout")

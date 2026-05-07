@@ -1,13 +1,33 @@
 """Clue model — mapping to clue-collector tables"""
+from enum import Enum as PyEnum
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
-from sqlalchemy import String, Integer, Text, DateTime, ForeignKey, Boolean
+from sqlalchemy import String, Integer, Text, DateTime, ForeignKey, Boolean, Enum
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+
+class SourceStatus(str, PyEnum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    ERROR = "error"
+
+
+class DataSourceType(str, PyEnum):
+    HOTLIST = "hotlist"
+    ACCOUNT = "account"
+    VIDEO = "video"
+    CUSTOM = "custom"
+
+
+class CollectorType(str, PyEnum):
+    CONFIGURABLE = "configurable"
+    PLUGIN = "plugin"
+    KOL = "kol"
 
 
 class Clue(Base):
@@ -73,12 +93,12 @@ class DataSource(Base):
         PG_UUID(as_uuid=True), ForeignKey("source_groups.id"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    type: Mapped[str] = mapped_column(String(20), nullable=False)
+    type: Mapped[DataSourceType] = mapped_column(Enum(DataSourceType), nullable=False)
     collector_type: Mapped[str] = mapped_column(String(20), nullable=False)
     config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    status: Mapped[SourceStatus] = mapped_column(Enum(SourceStatus), nullable=False, default=SourceStatus.ACTIVE)
     last_collected_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

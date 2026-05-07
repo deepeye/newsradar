@@ -108,7 +108,7 @@ class DataSourceRepository(BaseRepository):
         group_id: UUID,
         name: str,
         source_type: DataSourceType,
-        collector_type: CollectorType,
+        collector_type: str,
         config: dict,
         priority: int = 5
     ) -> DataSource:
@@ -277,6 +277,8 @@ class ClueRepository(BaseRepository):
                 .values(
                     rank=rank,
                     heat_value=heat_value,
+                    url=url or existing.url,
+                    cover_image=cover_image or existing.cover_image,
                     likes=likes or existing.likes,
                     comments=comments or existing.comments,
                     shares=shares or existing.shares,

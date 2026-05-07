@@ -11,9 +11,11 @@ const typeColors: Record<AISuggestion["type"], string> = {
 
 interface CopilotSuggestionProps {
   suggestion: AISuggestion;
+  onAccept: () => void;
+  onReject: () => void;
 }
 
-export function CopilotSuggestion({ suggestion }: CopilotSuggestionProps) {
+export function CopilotSuggestion({ suggestion, onAccept, onReject }: CopilotSuggestionProps) {
   return (
     <div className="p-3 rounded-md bg-card shadow-card space-y-2">
       <div className="flex items-center justify-between">
@@ -31,11 +33,20 @@ export function CopilotSuggestion({ suggestion }: CopilotSuggestionProps) {
         </p>
       </div>
       <div className="flex items-center gap-2 pt-1">
-        <Button size="sm" className="h-7 text-xs bg-brand hover:bg-brand-dark text-white">
+        <Button
+          size="sm"
+          className="h-7 text-xs bg-brand hover:bg-brand-dark text-white"
+          onClick={onAccept}
+        >
           <Check className="h-3 w-3 mr-1" />
           替换原句
         </Button>
-        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-muted-foreground"
+          onClick={onReject}
+        >
           <X className="h-3 w-3 mr-1" />
           拒绝
         </Button>

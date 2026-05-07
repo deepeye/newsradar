@@ -31,9 +31,12 @@ class Settings(BaseSettings):
 
     # Qwen AI
     QWEN_API_KEY: str = ""
-    QWEN_MODEL: str = "qwen3.6-35b-a3b"
+    QWEN_MODEL: str = "qwen-plus"
     QWEN_TIMEOUT: int = 300
-    QWEN_BASE_URL: str = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+    QWEN_BASE_URL: str = Field(
+        default="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        alias="QWEN_API_BASE",
+    )
 
     # AI Cache
     AI_CACHE_TTL: int = 300

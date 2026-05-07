@@ -18,24 +18,31 @@ services:
   web:
     build:
       context: ../web
-      dockerfile: web.Dockerfile
+      dockerfile: Dockerfile
     container_name: newsradar-web
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=/newsradar
+      - HOSTNAME=0.0.0.0
     depends_on:
       api:
         condition: service_started
     networks:
       - newsradar-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 5s
+      retries: 3
     restart: unless-stopped
 
   # ==================== API 服务 ====================
   api:
     build:
       context: ../api
-      dockerfile: api.Dockerfile
+      dockerfile: Dockerfile
     container_name: newsradar-api
     ports:
       - "8001:8001"
@@ -44,6 +51,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-key-change-in-prod}
       - QWEN_API_KEY=${QWEN_API_KEY}
+      - QWEN_API_BASE=${QWEN_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
       - APP_PORT=8001
       - APP_ENV=development
     depends_on:
@@ -59,7 +67,7 @@ services:
   collector:
     build:
       context: ../clue-collector
-      dockerfile: clue-collector.Dockerfile
+      dockerfile: Dockerfile
     container_name: newsradar-collector
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/newsradar
@@ -69,6 +77,8 @@ services:
       - QWEN_API_BASE=${QWEN_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1}
       - TRANSLATION_ENABLED=${TRANSLATION_ENABLED:-true}
       - TRANSLATION_THINKING_ENABLED=${TRANSLATION_THINKING_ENABLED:-false}
+      - HTTP_PROXY=${HTTP_PROXY:-http://host.docker.internal:7897}
+      - HTTPS_PROXY=${HTTPS_PROXY:-http://host.docker.internal:7897}
     depends_on:
       postgres:
         condition: service_healthy

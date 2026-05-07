@@ -18,17 +18,33 @@ export interface ReferenceDoc {
   lastUpdated: string;
 }
 
-export interface WorkbenchData {
-  articleTitle: string;
-  author: string;
-  date: string;
-  urgent: boolean;
-  content: string;
+export interface ArticleResponse {
+  id: string;
+  outlineId: string | null;
+  title: string;
+  authorId: string | null;
+  content: string | null;
   wordCount: number;
   targetWordCount: number;
   completionPercent: number;
-  lastSaved: string;
-  suggestions: AISuggestion[];
-  metrics: ContentMetrics;
-  references: ReferenceDoc[];
+  urgent: boolean;
+  aiSuggestions: AISuggestion[] | null;
+  metrics: ContentMetrics | null;
+  references: ReferenceDoc[] | null;
+  status: string;
+  lastSavedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ArticleCreateRequest {
+  title: string;
+  outlineId?: string;
+  targetWordCount?: number;
+  urgent?: boolean;
+}
+
+export interface ArticleSaveRequest {
+  content?: string;
+  title?: string;
 }

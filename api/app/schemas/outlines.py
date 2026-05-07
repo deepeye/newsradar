@@ -7,31 +7,40 @@ from app.schemas.common import CamelModel
 
 
 class HeadlineSuggestion(CamelModel):
+    id: Optional[str] = None
     style: str
     text: str
 
 
 class OutlineItem(CamelModel):
-    id: str
+    id: Optional[str] = None
     content: str
     has_ai_rewrite: bool = False
 
 
 class OutlineSection(CamelModel):
-    id: str
+    id: Optional[str] = None
     number: str
     title: str
     items: List[OutlineItem]
 
+    class Config:
+        coerced_types = True
+
+    def __init__(self, **data):
+        if "number" in data and not isinstance(data["number"], str):
+            data["number"] = str(data["number"])
+        super().__init__(**data)
+
 
 class InterviewDirection(CamelModel):
-    id: str
+    id: Optional[str] = None
     role: str
     description: str
 
 
 class ReferenceLink(CamelModel):
-    id: str
+    id: Optional[str] = None
     title: str
     source: str
     url: Optional[str] = None

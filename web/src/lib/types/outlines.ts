@@ -30,14 +30,25 @@ export interface ReferenceLink {
   url: string;
 }
 
-export interface OutlinesData {
-  topicTitle: string;
-  summary: string;
+export interface OutlineResponse {
+  id: string;
+  title: string;
+  summary: string | null;
   urgency: string;
   infoDensity: number;
-  headlines: HeadlineSuggestion[];
-  leadParagraph: string;
-  outlineSections: OutlineSection[];
-  interviewDirections: InterviewDirection[];
-  references: ReferenceLink[];
+  headlines: HeadlineSuggestion[] | null;
+  leadParagraph: string | null;
+  outlineSections: OutlineSection[] | null;
+  interviewDirections: InterviewDirection[] | null;
+  references: ReferenceLink[] | null;
+  sourceClueIds: string[] | null;
+  aiModel: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OutlineListResponse {
+  total: number;
+  items: OutlineResponse[];
 }

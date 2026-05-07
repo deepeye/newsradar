@@ -1,5 +1,6 @@
 """Playwright 动态渲染适配器"""
 import asyncio
+import os
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
@@ -24,12 +25,22 @@ class PlaywrightAdaptor:
     """Playwright 动态渲染适配器
 
     用于处理需要 JavaScript 渲染的页面，如抖音、微博等动态加载内容
+    基于 scrapling 框架的最佳实践优化
     """
 
     def __init__(self):
         self._browser: Optional[Browser] = None
         self._playwright = None
         self._initialized = False
+
+    def _get_proxy(self, config: Dict[str, Any]) -> Optional[Dict[str, str]]:
+        """获取代理配置，优先使用 config 中的 proxy，其次环境变量"""
+        proxy_url = config.get("proxy")
+        if not proxy_url:
+            proxy_url = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+        if proxy_url:
+            return {"server": proxy_url}
+        return None
 
     async def initialize(self) -> None:
         """初始化 Playwright"""
@@ -45,6 +56,8 @@ class PlaywrightAdaptor:
                     '--disable-dev-shm-usage',
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
+                    '--disable-gpu',
+                    '--disable-software-rasterizer',
                 ]
             )
             self._initialized = True
@@ -70,6 +83,9 @@ class PlaywrightAdaptor:
         config: Dict[str, Any],
         timeout: int = 30000,
         wait_for: Optional[str] = None,
+        wait_state: str = "attached",
+        network_idle: bool = True,
+        extra_wait: int = 2000,
     ) -> RenderResult:
         """渲染页面
 
@@ -78,6 +94,9 @@ class PlaywrightAdaptor:
             config: 配置项，包含 headers, cookies, user_agent 等
             timeout: 超时时间（毫秒）
             wait_for: 等待特定元素出现的选择器
+            wait_state: 等待状态 (attached/visible/hidden/detached)，默认 attached
+            network_idle: 是否等待网络空闲，默认 True
+            extra_wait: 页面加载后的额外等待时间（毫秒），默认 2000
 
         Returns:
             RenderResult: 渲染结果
@@ -102,6 +121,12 @@ class PlaywrightAdaptor:
             if config.get("headers"):
                 context_options["extra_http_headers"] = config["headers"]
 
+            # 添加代理
+            proxy = self._get_proxy(config)
+            if proxy:
+                context_options["proxy"] = proxy
+                logger.debug("playwright_using_proxy", proxy=proxy["server"])
+
             context = await self._browser.new_context(**context_options)
 
             # 添加 cookies
@@ -116,8 +141,8 @@ class PlaywrightAdaptor:
             # 设置超时
             page.set_default_timeout(timeout)
 
-            # 导航到页面
-            response = await page.goto(url, wait_until="networkidle")
+            # 导航到页面 - 使用 domcontentloaded 而非 networkidle（更快）
+            response = await page.goto(url, wait_until="domcontentloaded")
 
             status_code = response.status if response else 200
 
@@ -128,14 +153,34 @@ class PlaywrightAdaptor:
                     error_message=f"HTTP {status_code}"
                 )
 
-            # 等待特定元素
+            # 等待网络空闲（动态内容加载）
+            if network_idle:
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=min(timeout, 10000))
+                except Exception:
+                    # 网络空闲超时不影响继续，只记录
+                    logger.debug("network_idle_timeout", url=url)
+
+            # 等待特定元素 - 使用 attached 状态（元素存在于 DOM 即可）
             if wait_for:
-                await page.wait_for_selector(wait_for, timeout=timeout)
+                try:
+                    await page.wait_for_selector(wait_for, state=wait_state, timeout=min(timeout, 15000))
+                except asyncio.TimeoutError as e:
+                    # 检查元素是否实际存在
+                    elements = await page.locator(wait_for).count()
+                    if elements > 0:
+                        logger.debug("wait_for_found_but_not_state",
+                                    url=url, selector=wait_for, elements=elements, state=wait_state)
+                        # 元素存在但状态不对，继续执行
+                    else:
+                        raise e
             else:
                 # 默认等待页面稳定
                 await page.wait_for_load_state("domcontentloaded")
-                # 等待一小段时间让动态内容加载
-                await asyncio.sleep(2)
+
+            # 额外等待时间让动态内容完全加载
+            if extra_wait > 0:
+                await asyncio.sleep(extra_wait / 1000)
 
             # 获取渲染后的 HTML
             content = await page.content()

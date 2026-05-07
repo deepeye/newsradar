@@ -39,6 +39,7 @@ class CollectorType(str, PyEnum):
     """采集器类型"""
     CONFIGURABLE = "configurable"  # 配置化
     PLUGIN = "plugin"              # 插件化
+    KOL = "kol"                    # KOL采集
 
 
 class CollectStatus(str, PyEnum):
@@ -66,7 +67,11 @@ class SourceGroup(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     collect_interval: Mapped[int] = mapped_column(
         Integer, nullable=False, default=30,
-        comment="采集频率（分钟）"
+        comment="采集频率（分钟），schedule_time设置后忽略"
+    )
+    schedule_time: Mapped[Optional[str]] = mapped_column(
+        String(5), nullable=True, default=None,
+        comment="定时采集时间 HH:MM（北京时间），设置后忽略collect_interval"
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
@@ -102,8 +107,8 @@ class DataSource(Base):
     type: Mapped[DataSourceType] = mapped_column(
         Enum(DataSourceType), nullable=False
     )
-    collector_type: Mapped[CollectorType] = mapped_column(
-        Enum(CollectorType), nullable=False
+    collector_type: Mapped[str] = mapped_column(
+        String(20), nullable=False
     )
     config: Mapped[dict] = mapped_column(
         JSONB, nullable=False, default=dict,
@@ -423,3 +428,74 @@ class CookieEntry(Base):
         if total == 0:
             return 1.0
         return self.success_count / total
+
+
+class KOLPlatform(str, PyEnum):
+    """KOL平台"""
+    WEIBO = "weibo"
+    X = "x"
+
+
+class KOLProfile(Base):
+    """KOL档案"""
+    __tablename__ = "kol_profiles"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    source_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("data_sources.id", ondelete="CASCADE"),
+        nullable=False, unique=True
+    )
+    platform: Mapped[str] = mapped_column(
+        String(20), nullable=False,
+        comment="平台: weibo/x"
+    )
+    platform_id: Mapped[str] = mapped_column(
+        String(100), nullable=False,
+        comment="平台用户ID（微博UID / X用户名）"
+    )
+    screen_name: Mapped[str] = mapped_column(
+        String(100), nullable=False
+    )
+    avatar_url: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True
+    )
+    bio: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True
+    )
+    follower_count: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    following_count: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    post_count: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    last_synced_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False,
+        default=func.now(), onupdate=func.now()
+    )
+
+    # 关联关系
+    source: Mapped["DataSource"] = relationship("DataSource")
+
+    # 索引
+    __table_args__ = (
+        Index("ix_kol_profiles_source_id", "source_id", unique=True),
+        Index("ix_kol_profiles_platform", "platform"),
+        Index("uq_kol_profiles_platform_id", "platform", "platform_id", unique=True),
+    )
+
+    def __repr__(self) -> str:
+        return f"<KOLProfile(platform={self.platform}, name={self.screen_name})>"

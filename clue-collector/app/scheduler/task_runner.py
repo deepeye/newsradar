@@ -8,6 +8,7 @@ from app.storage import db_manager
 from app.storage.repository import DataSourceRepository, ClueRepository, CollectLogRepository
 from app.storage.models import DataSource, CollectStatus, DataSourceType, CollectorType
 from app.collectors import ConfigurableCollector
+from app.collectors.kol import KOLCollector
 from app.anti_crawl import anti_crawl
 from app.services.translation_service import translation_service
 from app.utils.logger import get_logger
@@ -23,7 +24,8 @@ class TaskRunner:
         self.running = False
         self._workers: list[asyncio.Task] = []
         self._collectors = {
-            CollectorType.CONFIGURABLE: ConfigurableCollector(),
+            CollectorType.CONFIGURABLE.value: ConfigurableCollector(),
+            CollectorType.KOL.value: KOLCollector(),
         }
 
     async def start(self) -> None:
@@ -189,9 +191,13 @@ class TaskRunner:
                 else:
                     await task_queue.complete(task)
 
-    def _get_collector(self, collector_type: CollectorType):
+    def _get_collector(self, collector_type: str):
         """获取采集器实例"""
-        return self._collectors.get(collector_type)
+        # 兼容旧数据：数据库中可能是大写枚举名（如 CONFIGURABLE）
+        collector = self._collectors.get(collector_type)
+        if collector is None:
+            collector = self._collectors.get(collector_type.lower())
+        return collector
 
 
 # 全局执行器实例

@@ -2,11 +2,19 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchFromApi } from "@/lib/api/client";
-import type { OutlinesData } from "@/lib/types/outlines";
+import type { OutlineListResponse, OutlineResponse } from "@/lib/types/outlines";
 
-export function useOutlinesData() {
+export function useOutlinesList() {
   return useQuery({
     queryKey: ["outlines"],
-    queryFn: () => fetchFromApi<OutlinesData>("/api/outlines"),
+    queryFn: () => fetchFromApi<OutlineListResponse>("/api/outlines"),
+  });
+}
+
+export function useOutline(id: string | null) {
+  return useQuery({
+    queryKey: ["outlines", id],
+    queryFn: () => fetchFromApi<OutlineResponse>(`/api/outlines/${id}`),
+    enabled: !!id,
   });
 }

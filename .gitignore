@@ -1,1 +1,40 @@
 .env
+.env.local
+.env.*.local
+
+# Next.js
+.next/
+out/
+
+# Dependencies
+node_modules/
+
+# Playwright
+.playwright-mcp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+
+# Screenshots (generated during testing)
+login-*.png
+kol-*.png

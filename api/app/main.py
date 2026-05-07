@@ -73,3 +73,6 @@ app.include_router(workbench_router)
 
 from app.api.data_sources import router as data_sources_router
 app.include_router(data_sources_router)
+
+from app.api.kol import router as kol_router
+app.include_router(kol_router)

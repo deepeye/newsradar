@@ -1,14 +1,37 @@
 "use client";
 
-import { useAIDiscoveryData } from "@/lib/api/queries/ai-discovery";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAIDiscoveryData, useGenerateOutline, useRefreshDiscovery } from "@/lib/api/queries/ai-discovery";
 import { OrgConfigCard } from "@/components/ai-discovery/org-config-card";
 import { RecommendationCard } from "@/components/ai-discovery/recommendation-card";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight, Clock } from "lucide-react";
+import { Sparkles, ArrowRight, Clock, RefreshCw } from "lucide-react";
+import type { AITopicRecommendation } from "@/lib/types/ai-discovery";
 
 export default function AIDiscoveryPage() {
   const { data, isLoading } = useAIDiscoveryData();
+  const generateOutline = useGenerateOutline();
+  const refreshDiscovery = useRefreshDiscovery();
+  const router = useRouter();
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+
+  async function handleGenerateOutline(rec: AITopicRecommendation) {
+    if (!data?.clueIds?.length) return;
+    setGeneratingId(rec.id);
+    try {
+      const outline = await generateOutline.mutateAsync({
+        clueIds: data.clueIds,
+        additionalContext: `选题方向：${rec.title}。推荐理由：${rec.reason}。切入角度：${rec.angles.join("；")}`,
+      });
+      router.push(`/outlines?id=${outline.id}`);
+    } catch {
+      // error handled by mutation state
+    } finally {
+      setGeneratingId(null);
+    }
+  }
 
   if (isLoading || !data) {
     return (
@@ -24,11 +47,22 @@ export default function AIDiscoveryPage() {
       <OrgConfigCard config={data.orgConfig} />
 
       {/* Section header */}
-      <SectionHeader
-        icon={Sparkles}
-        title="AI 智能选题推荐"
-        subtitle={`基于机构调性，AI 从 ${data.totalClues.toLocaleString()} 条线索中精选今日选题`}
-      />
+      <div className="flex items-center justify-between">
+        <SectionHeader
+          icon={Sparkles}
+          title="AI 智能选题推荐"
+          subtitle={`基于机构调性，AI 从 ${data.totalClues.toLocaleString()} 条线索中精选今日选题`}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refreshDiscovery.mutate()}
+          disabled={refreshDiscovery.isPending}
+        >
+          <RefreshCw className={`h-3.5 w-3.5 mr-1 ${refreshDiscovery.isPending ? "animate-spin" : ""}`} />
+          刷新推荐
+        </Button>
+      </div>
 
       {/* Last updated */}
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -39,7 +73,12 @@ export default function AIDiscoveryPage() {
       {/* Recommendation cards */}
       <div className="space-y-md">
         {data.recommendations.map((rec) => (
-          <RecommendationCard key={rec.id} recommendation={rec} />
+          <RecommendationCard
+            key={rec.id}
+            recommendation={rec}
+            onGenerateOutline={handleGenerateOutline}
+            isGenerating={generatingId === rec.id}
+          />
         ))}
       </div>
 

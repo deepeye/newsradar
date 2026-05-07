@@ -31,5 +31,6 @@ class DiscoveryResponse(CamelModel):
     org_config: OrgConfigResponse
     total_clues: int
     last_updated: str
+    clue_ids: List[str]
     recommendations: List[AITopicRecommendation]
     total_recommendations: int

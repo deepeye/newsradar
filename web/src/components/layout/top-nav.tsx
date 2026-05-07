@@ -7,6 +7,7 @@ import {
   Sparkles,
   FileText,
   PenLine,
+  Users,
   Search,
   Bell,
   Settings,
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "KOL", href: "/kol", icon: Users },
   { label: "AI Discovery", href: "/ai-discovery", icon: Sparkles },
   { label: "Outlines", href: "/outlines", icon: FileText },
   { label: "Workbench", href: "/workbench", icon: PenLine },

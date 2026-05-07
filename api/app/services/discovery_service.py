@@ -65,12 +65,14 @@ class DiscoveryService:
                 "org_config": {"id": "", "name": "", "domains": [], "style": []},
                 "total_clues": 0,
                 "last_updated": "",
+                "clue_ids": [],
                 "recommendations": [],
                 "total_recommendations": 0,
             }
 
         total_clues = await self.clue_repo.count_total()
         clues = await self.clue_repo.get_all(limit=50)
+        clue_ids = [str(c.id) for c in clues[:30]]
 
         clues_text = "\n".join(
             f"{i+1}. [{c.author or '未知'}] {c.title} (热度: {c.heat_value or 'N/A'})"
@@ -109,6 +111,7 @@ class DiscoveryService:
             },
             "total_clues": total_clues,
             "last_updated": datetime.now(timezone.utc).isoformat(),
+            "clue_ids": clue_ids,
             "recommendations": recommendations,
             "total_recommendations": len(recommendations),
         }

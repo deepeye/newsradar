@@ -17,6 +17,7 @@ export interface AIDiscoveryData {
   orgConfig: OrgConfig;
   totalClues: number;
   lastUpdated: string;
+  clueIds: string[];
   recommendations: AITopicRecommendation[];
   totalRecommendations: number;
 }

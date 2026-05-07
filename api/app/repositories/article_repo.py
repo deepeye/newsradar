@@ -57,4 +57,5 @@ class ArticleRepository(BaseRepository):
 
         article.last_saved_at = datetime.now(timezone.utc)
         await self.session.flush()
+        await self.session.refresh(article)
         return article

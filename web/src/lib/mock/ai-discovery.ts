@@ -7,6 +7,7 @@ export const aiDiscoveryData: AIDiscoveryData = {
   },
   totalClues: 12408,
   lastUpdated: "10分钟前",
+  clueIds: ["mock-clue-1", "mock-clue-2", "mock-clue-3"],
   recommendations: [
     {
       id: "rec1",

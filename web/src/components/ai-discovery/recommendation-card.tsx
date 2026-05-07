@@ -12,9 +12,11 @@ const tagIcons: Record<string, typeof TrendingUp> = {
 
 interface RecommendationCardProps {
   recommendation: AITopicRecommendation;
+  onGenerateOutline: (rec: AITopicRecommendation) => void;
+  isGenerating: boolean;
 }
 
-export function RecommendationCard({ recommendation }: RecommendationCardProps) {
+export function RecommendationCard({ recommendation, onGenerateOutline, isGenerating }: RecommendationCardProps) {
   const Icon = tagIcons[recommendation.sourceIcon] || TrendingUp;
 
   return (
@@ -69,8 +71,12 @@ export function RecommendationCard({ recommendation }: RecommendationCardProps) 
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-2">
-          <Button className="bg-brand hover:bg-brand-dark text-white flex-1">
-            生成大纲
+          <Button
+            className="bg-brand hover:bg-brand-dark text-white flex-1"
+            onClick={() => onGenerateOutline(recommendation)}
+            disabled={isGenerating}
+          >
+            {isGenerating ? "生成中..." : "生成大纲"}
           </Button>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             关闭

@@ -31,7 +31,7 @@ export function EditorStatusBar({
         </div>
       </div>
       <div className="text-muted-foreground">
-        自动保存于 {lastSaved}
+        {lastSaved ? `自动保存于 ${lastSaved}` : "未保存"}
       </div>
     </div>
   );

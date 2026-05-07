@@ -1,11 +1,11 @@
 """Data source repository — CRUD operations"""
 from typing import Sequence, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.clue import DataSource, SourceGroup
+from app.models.clue import DataSource, SourceGroup, SourceStatus
 from app.repositories.base import BaseRepository
 
 
@@ -30,6 +30,7 @@ class SourceGroupRepository(BaseRepository):
         is_active: bool = True,
     ) -> SourceGroup:
         group = SourceGroup(
+            id=uuid4(),
             name=name,
             collect_interval=collect_interval,
             is_active=is_active,
@@ -63,7 +64,7 @@ class DataSourceRepository(BaseRepository):
         result = await self.session.execute(
             select(DataSource)
             .where(DataSource.is_active == True)
-            .where(DataSource.status == "active")
+            .where(DataSource.status == SourceStatus.ACTIVE)
             .order_by(DataSource.priority.desc())
         )
         return result.scalars().all()
@@ -87,6 +88,7 @@ class DataSourceRepository(BaseRepository):
         is_active: bool = True,
     ) -> DataSource:
         source = DataSource(
+            id=uuid4(),
             group_id=group_id,
             name=name,
             type=type,
@@ -94,7 +96,7 @@ class DataSourceRepository(BaseRepository):
             config=config,
             priority=priority,
             is_active=is_active,
-            status="active",
+            status=SourceStatus.ACTIVE,
         )
         self.session.add(source)
         await self.session.flush()
