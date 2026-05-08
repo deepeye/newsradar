@@ -95,7 +95,7 @@ class KOLService:
 
         # Import cookies if provided
         if request.cookies:
-            await self.cookie_repo.add_cookie(source.id, request.cookies)
+            await self.cookie_repo.add_cookie(source.id, request.cookies, platform=request.platform)
 
         await self.session.commit()
 
@@ -151,7 +151,7 @@ class KOLService:
         if not profile:
             raise NotFoundException("KOL profile not found")
 
-        entry = await self.cookie_repo.add_cookie(profile.source_id, cookies)
+        entry = await self.cookie_repo.add_cookie(profile.source_id, cookies, platform=profile.platform)
         await self.session.commit()
         return {"id": str(entry.id), "status": entry.status}
 

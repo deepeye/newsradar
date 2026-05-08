@@ -57,6 +57,11 @@ export function CookieImportDialog({ kol, onClose }: CookieImportDialogProps) {
               rows={6}
               className="w-full px-3 py-2 rounded-lg border border-outline-variant/50 bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
             />
+            {kol.platform === "x" && (
+              <p className="mt-1 text-xs text-tertiary">
+                X Cookie 将在所有 X KOL 之间共享，只需导入一次即可
+              </p>
+            )}
           </div>
 
           <div className="flex gap-2">

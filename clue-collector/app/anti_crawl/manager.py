@@ -54,7 +54,7 @@ class AntiCrawlModule:
         logger.info("anti_crawl_closed")
 
     async def get_context(self, source_id: str, platform: Optional[str] = None) -> RequestContext:
-        """获取请求上下文（支持Cookie轮换）"""
+        """获取请求上下文（支持Cookie轮换，X平台共享Cookie）"""
         if not self.enabled:
             return RequestContext()
 
@@ -68,18 +68,12 @@ class AntiCrawlModule:
         user_agent = ua_rotator.get_ua(platform)
         headers = ua_rotator.get_ua_with_headers(platform)
 
-        # 获取Cookie（支持轮换）
+        # 获取Cookie（X平台共享，其他平台按source_id）
         cookies = None
         cookie_id = None
-        cookie_data = await cookie_pool.get_cookie(source_id)
+        cookie_data, cookie_id = await cookie_pool.get_cookie(source_id, platform=platform)
         if cookie_data:
             cookies = cookie_data
-            # 查找对应的Cookie ID（用于后续上报）
-            cookie_entries = await cookie_pool.get_all_cookies(source_id)
-            for entry in cookie_entries:
-                if entry.cookies == cookies:
-                    cookie_id = entry.id
-                    break
 
         return RequestContext(
             proxy=proxy,
@@ -158,19 +152,21 @@ class AntiCrawlModule:
         source_id: str,
         cookies: Dict[str, str],
         name: Optional[str] = None,
-        expires_days: Optional[int] = None
+        expires_days: Optional[int] = None,
+        platform: Optional[str] = None
     ) -> UUID:
         """添加Cookie到池"""
-        return await cookie_pool.add_cookie(source_id, cookies, name, expires_days)
+        return await cookie_pool.add_cookie(source_id, cookies, name, expires_days, platform=platform)
 
     async def add_cookies_batch(
         self,
         source_id: str,
         cookies_list: List[Dict[str, str]],
-        expires_days: Optional[int] = None
+        expires_days: Optional[int] = None,
+        platform: Optional[str] = None
     ) -> List[UUID]:
         """批量添加Cookie"""
-        return await cookie_pool.add_cookies_batch(source_id, cookies_list, expires_days)
+        return await cookie_pool.add_cookies_batch(source_id, cookies_list, expires_days, platform=platform)
 
     async def invalidate_cookies(self, source_id: str) -> int:
         """失效某个数据源的所有Cookie"""

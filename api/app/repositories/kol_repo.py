@@ -78,13 +78,14 @@ class CookieRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add_cookie(self, source_id: UUID, cookies: dict, name: str = None) -> CookieEntry:
+    async def add_cookie(self, source_id: UUID, cookies: dict, name: str = None, platform: str = None) -> CookieEntry:
         now = datetime.now(timezone.utc)
         entry = CookieEntry(
             id=uuid4(),
             source_id=source_id,
             cookies=cookies,
             name=name or "imported",
+            platform=platform,
             status="active",
             use_count=0,
             success_count=0,

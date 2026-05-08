@@ -407,6 +407,10 @@ class CookieEntry(Base):
         DateTime(timezone=True), nullable=False,
         default=func.now(), onupdate=func.now()
     )
+    platform: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True,
+        comment="平台标识，用于跨数据源共享Cookie (x/weibo)"
+    )
     extra_data: Mapped[Optional[dict]] = mapped_column(
         JSONB, nullable=True,
         comment="额外数据"
@@ -417,6 +421,7 @@ class CookieEntry(Base):
         Index("ix_cookie_pool_source_id", "source_id"),
         Index("ix_cookie_pool_status", "status"),
         Index("ix_cookie_pool_source_status", "source_id", "status"),
+        Index("ix_cookie_pool_platform_status", "platform", "status"),
     )
 
     def __repr__(self) -> str:

@@ -35,7 +35,8 @@ class CookiePool:
         source_id: str,
         cookies: Dict[str, str],
         name: Optional[str] = None,
-        expires_days: Optional[int] = None
+        expires_days: Optional[int] = None,
+        platform: Optional[str] = None,
     ) -> UUID:
         """添加单个Cookie"""
         async with db_manager.session() as session:
@@ -47,6 +48,7 @@ class CookiePool:
                 source_id=UUID(source_id),
                 cookies=cookies,
                 name=name,
+                platform=platform,
                 status="active",
                 expires_at=expires_at
             )
@@ -64,7 +66,8 @@ class CookiePool:
         self,
         source_id: str,
         cookies_list: List[Dict[str, str]],
-        expires_days: Optional[int] = None
+        expires_days: Optional[int] = None,
+        platform: Optional[str] = None
     ) -> List[UUID]:
         """批量添加Cookie"""
         ids = []
@@ -73,42 +76,59 @@ class CookiePool:
                 source_id=source_id,
                 cookies=cookies,
                 name=f"Cookie-{i+1}",
-                expires_days=expires_days
+                expires_days=expires_days,
+                platform=platform
             )
             ids.append(cookie_id)
         logger.info("cookies_batch_added", source_id=source_id, count=len(ids))
         return ids
 
-    async def get_cookie(self, source_id: str) -> Optional[Dict[str, str]]:
-        """获取一个可用Cookie（轮换策略：随机选择 + 成功率优先）"""
+    async def get_cookie(self, source_id: str, platform: Optional[str] = None) -> tuple[Optional[Dict[str, str]], Optional[UUID]]:
+        """获取一个可用Cookie（轮换策略：随机选择 + 成功率优先）
+
+        Returns: (cookies_dict, cookie_id) — cookie_id for reporting success/failure.
+        When platform="x": share cookies across all X data sources.
+        Otherwise: only find cookies bound to this source_id.
+        """
         async with db_manager.session() as session:
-            # 查询该数据源所有可用的Cookie
-            result = await session.execute(
-                select(CookieEntry)
-                .where(CookieEntry.source_id == UUID(source_id))
-                .where(CookieEntry.status == "active")
-                .where(
-                    (CookieEntry.expires_at == None) |
-                    (CookieEntry.expires_at > datetime.now(timezone.utc))
+            # X platform: share cookies across all X sources
+            if platform == "x":
+                result = await session.execute(
+                    select(CookieEntry)
+                    .where(CookieEntry.platform == "x")
+                    .where(CookieEntry.status == "active")
+                    .where(
+                        (CookieEntry.expires_at == None) |
+                        (CookieEntry.expires_at > datetime.now(timezone.utc))
+                    )
+                    .order_by(CookieEntry.success_count.desc(), CookieEntry.use_count.asc())
                 )
-                .order_by(CookieEntry.success_count.desc(), CookieEntry.use_count.asc())
-            )
+            else:
+                # Per-source lookup (weibo, etc.)
+                result = await session.execute(
+                    select(CookieEntry)
+                    .where(CookieEntry.source_id == UUID(source_id))
+                    .where(CookieEntry.status == "active")
+                    .where(
+                        (CookieEntry.expires_at == None) |
+                        (CookieEntry.expires_at > datetime.now(timezone.utc))
+                    )
+                    .order_by(CookieEntry.success_count.desc(), CookieEntry.use_count.asc())
+                )
             cookies = result.scalars().all()
 
             if not cookies:
-                logger.debug("no_available_cookies", source_id=source_id)
-                return None
+                logger.debug("no_available_cookies", source_id=source_id, platform=platform)
+                return None, None
 
-            # 选择策略：优先选择成功率高的，但在成功次数相近时随机
-            # 如果有成功率100%的，优先用它们
+            # Selection strategy: prefer "perfect" cookies, otherwise random from top 3
             perfect_cookies = [c for c in cookies if c.fail_count == 0 and c.use_count > 0]
             if perfect_cookies:
                 selected = random.choice(perfect_cookies)
             else:
-                # 否则随机选择（避免单一Cookie过度使用）
                 selected = random.choice(cookies[:min(3, len(cookies))])
 
-            # 更新使用记录
+            # Update usage record
             await session.execute(
                 update(CookieEntry)
                 .where(CookieEntry.id == selected.id)
@@ -122,8 +142,10 @@ class CookiePool:
             logger.debug("cookie_selected",
                         cookie_id=str(selected.id),
                         source_id=source_id,
+                        platform=platform,
+                        cookie_source_id=str(selected.source_id),
                         use_count=selected.use_count)
-            return selected.cookies
+            return selected.cookies, selected.id
 
     async def get_all_cookies(self, source_id: str) -> List[CookieEntry]:
         """获取数据源所有Cookie"""

@@ -45,6 +45,7 @@ class CookieEntry(Base):
     )
     cookies: Mapped[dict] = mapped_column(JSONB, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    platform: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     use_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     success_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -54,3 +55,4 @@ class CookieEntry(Base):
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    extra_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
