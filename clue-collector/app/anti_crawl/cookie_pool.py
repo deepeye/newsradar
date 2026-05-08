@@ -87,12 +87,12 @@ class CookiePool:
         """获取一个可用Cookie（轮换策略：随机选择 + 成功率优先）
 
         Returns: (cookies_dict, cookie_id) — cookie_id for reporting success/failure.
-        When platform="x": share cookies across all X data sources.
+        When platform="x" or "weibo": share cookies across all same-platform sources.
         Otherwise: only find cookies bound to this source_id.
         """
         async with db_manager.session() as session:
-            # X platform: share cookies across all X sources
-            if platform == "x":
+            # X/Weibo platforms: share cookies across all same-platform sources
+            if platform in ("x", "weibo"):
                 result = await session.execute(
                     select(CookieEntry)
                     .where(CookieEntry.platform == "x")
