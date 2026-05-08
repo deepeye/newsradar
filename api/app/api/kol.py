@@ -47,7 +47,7 @@ async def delete_platform_cookie(
     """Delete a platform-level cookie by ID"""
     service = KOLService(db)
     # Find any kol_id that has this cookie (for validation)
-    deleted = await service.delete_cookie_by_cookie_id(cookie_id)
+    deleted = await service.delete_cookie_by_id(cookie_id)
     if not deleted:
         raise NotFoundException("Cookie not found")
     return {"detail": "Deleted"}
