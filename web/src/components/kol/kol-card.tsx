@@ -4,7 +4,7 @@ import type { KOLProfile } from "@/lib/types/kol";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, Cookie, Power, PowerOff } from "lucide-react";
+import { Trash2, Power, PowerOff } from "lucide-react";
 import { useDeleteKOL, useToggleKOL } from "@/lib/api/queries/kol";
 
 function formatCount(n?: number): string {
@@ -27,10 +27,9 @@ function timeAgo(date?: string): string {
 
 interface KOLCardProps {
   kol: KOLProfile;
-  onImportCookie: (kol: KOLProfile) => void;
 }
 
-export function KOLCard({ kol, onImportCookie }: KOLCardProps) {
+export function KOLCard({ kol }: KOLCardProps) {
   const deleteKOL = useDeleteKOL();
   const toggleKOL = useToggleKOL();
   const platformLabel = kol.platform === "weibo" ? "微博" : "X";
@@ -88,15 +87,6 @@ export function KOLCard({ kol, onImportCookie }: KOLCardProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={() => onImportCookie(kol)}
-          >
-            <Cookie className="h-3 w-3" />
-            导入Cookie
-          </Button>
           <Button
             variant="outline"
             size="sm"

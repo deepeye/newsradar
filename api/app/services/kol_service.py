@@ -155,11 +155,29 @@ class KOLService:
         await self.session.commit()
         return {"id": str(entry.id), "status": entry.status}
 
+    async def import_platform_cookies(self, platform: str, cookies: dict) -> dict:
+        """Import cookies for a platform (shared across all KOLs of that platform)"""
+        # Find any KOL of this platform to use its source_id
+        profiles = await self.kol_repo.get_by_platform(platform, limit=1)
+        if not profiles:
+            raise NotFoundException(f"No KOL found for platform {platform}")
+        source_id = profiles[0].source_id
+        entry = await self.cookie_repo.add_cookie(source_id, cookies, platform=platform)
+        await self.session.commit()
+        return {"id": str(entry.id), "status": entry.status}
+
     async def delete_cookie(self, kol_id: UUID, cookie_id: UUID) -> bool:
         profile = await self.kol_repo.get_by_id(kol_id)
         if not profile:
             raise NotFoundException("KOL profile not found")
 
+        deleted = await self.cookie_repo.delete_by_id(cookie_id)
+        if deleted:
+            await self.session.commit()
+        return deleted
+
+    async def delete_cookie_by_id(self, cookie_id: UUID) -> bool:
+        """Delete a cookie by its ID without requiring a KOL ID"""
         deleted = await self.cookie_repo.delete_by_id(cookie_id)
         if deleted:
             await self.session.commit()
@@ -203,7 +221,28 @@ class KOLService:
         ]
         return KOLPostListResponse(total=total, items=items)
 
-    async def _get_cookie_status(self, source_id: UUID) -> dict:
+    async def list_all_cookies(self) -> list:
+        """List all cookies grouped by platform"""
+        platforms = ["x", "weibo"]
+        result = []
+        for platform in platforms:
+            cookies = await self.cookie_repo.get_by_platform(platform)
+            result.append({
+                "platform": platform,
+                "cookies": [
+                    {
+                        "id": str(c.id),
+                        "name": c.name,
+                        "status": c.status,
+                        "created_at": c.created_at.isoformat() if c.created_at else None,
+                        "last_used_at": c.last_used_at.isoformat() if c.last_used_at else None,
+                    }
+                    for c in cookies
+                ]
+            })
+        return result
+
+    async def _get_cookie_status(self, source_id) -> dict:
         """Count cookies by status for a source"""
         entries = await self.cookie_repo.get_by_source(source_id)
         active = sum(1 for e in entries if e.status == "active")

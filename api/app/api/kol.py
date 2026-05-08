@@ -16,6 +16,43 @@ from app.core.exceptions import NotFoundException
 router = APIRouter(prefix="/api/kol", tags=["kol"])
 
 
+@router.get("/cookies", response_model=list)
+async def list_cookies(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all cookies grouped by platform"""
+    service = KOLService(db)
+    return await service.list_all_cookies()
+
+
+@router.post("/cookies/import")
+async def import_platform_cookies(
+    request: KOLCookieImport,
+    platform: str = Query(..., description="Platform: weibo or x"),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Import cookies for a platform (shared across all KOLs of that platform)"""
+    service = KOLService(db)
+    return await service.import_platform_cookies(platform, request.cookies)
+
+
+@router.delete("/cookies/{cookie_id}")
+async def delete_platform_cookie(
+    cookie_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a platform-level cookie by ID"""
+    service = KOLService(db)
+    # Find any kol_id that has this cookie (for validation)
+    deleted = await service.delete_cookie_by_cookie_id(cookie_id)
+    if not deleted:
+        raise NotFoundException("Cookie not found")
+    return {"detail": "Deleted"}
+
+
 @router.get("", response_model=KOLListResponse)
 async def list_kols(
     platform: str = Query(None, description="Filter by platform: weibo/x"),

@@ -104,6 +104,14 @@ class CookieRepository:
         )
         return result.scalars().all()
 
+    async def get_by_platform(self, platform: str) -> Sequence[CookieEntry]:
+        result = await self.session.execute(
+            select(CookieEntry)
+            .where(CookieEntry.platform == platform)
+            .order_by(CookieEntry.created_at.desc())
+        )
+        return result.scalars().all()
+
     async def delete_by_id(self, cookie_id: UUID) -> bool:
         result = await self.session.execute(
             delete(CookieEntry).where(CookieEntry.id == cookie_id)
