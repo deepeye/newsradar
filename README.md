@@ -352,7 +352,8 @@ docker compose up -d --build web
 
 | 用户名 / Username | 密码 / Password | 角色 / Role |
 |---|---|---|
-| `admin` | `admin` | Administrator |
+| `admin` | `admin123` | Administrator |
+| `editor` | `editor123` | Editor |
 
 > 生产环境请务必修改默认密码。
 
