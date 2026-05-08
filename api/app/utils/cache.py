@@ -39,6 +39,21 @@ class CacheManager:
         serialized = json.dumps(value, ensure_ascii=False, default=str)
         await self._client.set(key, serialized, ex=ttl)
 
+    async def get_with_ttl(self, key: str) -> tuple[Optional[Any], Optional[int]]:
+        """Return (value, remaining_ttl_seconds). ttl=None means key absent."""
+        if not self._client:
+            return None, None
+        pipe = self._client.pipeline()
+        pipe.get(key)
+        pipe.ttl(key)
+        value, ttl = await pipe.execute()
+        if value is None:
+            return None, None
+        try:
+            return json.loads(value), ttl
+        except (json.JSONDecodeError, TypeError):
+            return value, ttl
+
     async def delete(self, key: str) -> None:
         if not self._client:
             return

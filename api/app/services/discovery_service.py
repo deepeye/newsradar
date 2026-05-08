@@ -8,9 +8,14 @@ from app.repositories.org_config_repo import OrgConfigRepository
 from app.repositories.clue_repo import ClueRepository
 from app.services.ai_service import AIService
 from app.utils.cache import cache_manager
+from app.core.database import db_manager
 import structlog
 
 logger = structlog.get_logger("discovery_service")
+
+# Stale-while-revalidate: return cached data up to this age without revalidating
+FRESH_TTL = 120  # 2 min — data is considered fresh
+STALE_TTL = 300  # 5 min — serve stale data while refreshing in background
 
 
 class DiscoveryService:
@@ -42,7 +47,6 @@ class DiscoveryService:
             domains=config_domains,
             style=config_style,
         )
-        # Invalidate cached recommendations
         await cache_manager.delete("discovery:recommendations")
         return {
             "id": str(config.id),
@@ -54,21 +58,27 @@ class DiscoveryService:
     async def get_recommendations(self, force_refresh: bool = False) -> dict:
         cache_key = "discovery:recommendations"
 
-        if not force_refresh:
-            cached = await cache_manager.get(cache_key)
-            if cached:
-                return cached
+        if force_refresh:
+            return await self._generate_and_cache()
 
+        cached, ttl = await cache_manager.get_with_ttl(cache_key)
+
+        if cached is not None:
+            if ttl is not None and ttl > 0 and ttl > (STALE_TTL - FRESH_TTL):
+                # Fresh enough — return immediately
+                return cached
+            # Stale but available — return now, refresh background
+            self._schedule_refresh()
+            return cached
+
+        # No cache at all — must generate (first-time load)
+        return await self._generate_and_cache()
+
+    async def _generate_and_cache(self) -> dict:
+        cache_key = "discovery:recommendations"
         org_config = await self.org_config_repo.get_active()
         if not org_config:
-            return {
-                "org_config": {"id": "", "name": "", "domains": [], "style": []},
-                "total_clues": 0,
-                "last_updated": "",
-                "clue_ids": [],
-                "recommendations": [],
-                "total_recommendations": 0,
-            }
+            return self._empty_response()
 
         total_clues = await self.clue_repo.count_total()
         clues = await self.clue_repo.get_all(limit=50)
@@ -90,9 +100,8 @@ class DiscoveryService:
             logger.error("discovery_ai_failed", error=str(e))
             raw_recommendations = []
 
-        recommendations = []
-        for i, r in enumerate(raw_recommendations):
-            recommendations.append({
+        recommendations = [
+            {
                 "id": f"rec{i+1}",
                 "source": r.get("source", ""),
                 "source_icon": r.get("source_icon", "newspaper"),
@@ -100,7 +109,9 @@ class DiscoveryService:
                 "title": r.get("title", ""),
                 "reason": r.get("reason", ""),
                 "angles": r.get("angles", []),
-            })
+            }
+            for i, r in enumerate(raw_recommendations)
+        ]
 
         result = {
             "org_config": {
@@ -116,5 +127,29 @@ class DiscoveryService:
             "total_recommendations": len(recommendations),
         }
 
-        await cache_manager.set(cache_key, result, ttl=300)
+        await cache_manager.set(cache_key, result, ttl=STALE_TTL)
         return result
+
+    def _schedule_refresh(self) -> None:
+        import asyncio
+        asyncio.ensure_future(self._background_refresh())
+
+    async def _background_refresh(self) -> None:
+        async with db_manager.session() as session:
+            service = DiscoveryService(session)
+            try:
+                logger.info("discovery_background_refresh_start")
+                await service._generate_and_cache()
+                logger.info("discovery_background_refresh_done")
+            except Exception as e:
+                logger.error("discovery_background_refresh_error", error=str(e))
+
+    def _empty_response(self) -> dict:
+        return {
+            "org_config": {"id": "", "name": "", "domains": [], "style": []},
+            "total_clues": 0,
+            "last_updated": "",
+            "clue_ids": [],
+            "recommendations": [],
+            "total_recommendations": 0,
+        }
