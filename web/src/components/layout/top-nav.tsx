@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Sparkles,
@@ -14,16 +15,18 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "KOL", href: "/kol", icon: Users },
-  { label: "AI Discovery", href: "/ai-discovery", icon: Sparkles },
-  { label: "Outlines", href: "/outlines", icon: FileText },
-  { label: "Workbench", href: "/workbench", icon: PenLine },
-];
-
 export function TopNav() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const navItems = [
+    { label: "Dashboard", href: "/", icon: LayoutDashboard },
+    { label: "KOL", href: "/kol", icon: Users },
+    { label: "AI Discovery", href: "/ai-discovery", icon: Sparkles },
+    { label: "Outlines", href: "/outlines", icon: FileText },
+    { label: "Workbench", href: "/workbench", icon: PenLine },
+  ];
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-outline-variant/30">
@@ -41,10 +44,11 @@ export function TopNav() {
         {/* Navigation */}
         <nav className="flex items-center gap-1">
           {navItems.map((item) => {
-            const isActive =
+            const isActive = mounted && (
               item.href === "/"
                 ? pathname === "/"
-                : pathname.startsWith(item.href);
+                : pathname.startsWith(item.href)
+            );
             const Icon = item.icon;
             return (
               <Link
