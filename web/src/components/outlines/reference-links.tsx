@@ -13,9 +13,9 @@ export function ReferenceLinks({ references }: ReferenceLinksProps) {
         <h3 className="font-serif text-base font-semibold">参考素材链接</h3>
       </div>
       <div className="space-y-2">
-        {references.map((r) => (
+        {references.map((r, i) => (
           <a
-            key={r.id}
+            key={r.id ?? `ref-${i}`}
             href={r.url}
             className="flex items-center gap-3 p-3 bg-card rounded-md shadow-card hover:shadow-card-hover transition-shadow group"
           >

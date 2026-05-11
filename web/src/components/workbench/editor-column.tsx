@@ -53,7 +53,7 @@ export function EditorColumn({
         ref={textareaRef}
         value={content}
         onChange={(e) => onContentChange(e.target.value)}
-        className="flex-1 w-full p-lg resize-none bg-transparent text-sm text-foreground/90 leading-relaxed focus:outline-none placeholder:text-muted-foreground/40"
+        className="editor-textarea flex-1 w-full p-lg resize-none bg-transparent text-sm text-foreground/90 leading-relaxed focus:outline-none placeholder:text-muted-foreground/40"
         placeholder="开始撰写文章..."
         spellCheck={false}
       />

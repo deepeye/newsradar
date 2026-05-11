@@ -1,7 +1,7 @@
 import { dashboardData } from "@/lib/mock/dashboard";
 import { aiDiscoveryData } from "@/lib/mock/ai-discovery";
 import { outlinesData } from "@/lib/mock/outlines";
-import { mockArticle } from "@/lib/mock/workbench";
+import { mockArticle, mockContinueWriting, mockTranslate, mockFactCheck } from "@/lib/mock/workbench";
 import { kolListData, kolPostsData } from "@/lib/mock/kol";
 
 const USE_MOCK = !process.env.NEXT_PUBLIC_API_URL;
@@ -27,6 +27,7 @@ const mockPostDataMap: Record<string, () => unknown> = {
   "/api/workbench/articles/mock-article-1/ai-metrics": () => ({
     metrics: mockArticle.metrics,
   }),
+  "/api/workbench/articles/mock-article-1/ai-continue-writing": () => mockContinueWriting,
 };
 
 function getToken(): string | null {
@@ -62,6 +63,16 @@ export async function fetchFromApi<T>(
       }
       if (path.endsWith("/ai-metrics")) {
         return { metrics: mockArticle.metrics } as T;
+      }
+      if (path.endsWith("/ai-continue-writing")) {
+        return mockContinueWriting as T;
+      }
+      if (path.endsWith("/ai-translate")) {
+        const body = options.body ? JSON.parse(options.body as string) : {};
+        return mockTranslate(body.targetLanguage || "en") as T;
+      }
+      if (path.endsWith("/ai-fact-check")) {
+        return mockFactCheck as T;
       }
       throw new Error(`No mock POST handler for ${path}`);
     }
@@ -114,4 +125,106 @@ export async function fetchFromApi<T>(
 
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json() as Promise<T>;
+}
+
+/** SSE streaming fetch. Calls onEvent(event, data) for each parsed SSE event. Returns an abort controller. */
+export function fetchFromApiSSE(
+  path: string,
+  body: Record<string, unknown>,
+  onEvent: (event: string, data: unknown) => void,
+  onError?: (error: Error) => void
+): AbortController {
+  const controller = new AbortController();
+
+  if (USE_MOCK) {
+    // Mock streaming: emit created event, then send body content as chunks
+    const bodyContent = mockArticle.content || "";
+    const chunks: string[] = [];
+    const chunkSize = 80;
+    for (let i = 0; i < bodyContent.length; i += chunkSize) {
+      chunks.push(bodyContent.slice(i, i + chunkSize));
+    }
+
+    // Emit created event immediately
+    onEvent("created", { articleId: mockArticle.id, title: mockArticle.title, leadParagraph: mockArticle.leadParagraph ?? "" });
+
+    let idx = 0;
+    const interval = setInterval(() => {
+      if (controller.signal.aborted) {
+        clearInterval(interval);
+        return;
+      }
+      if (idx < chunks.length) {
+        onEvent("chunk", { content: chunks[idx] });
+        idx++;
+      } else {
+        clearInterval(interval);
+        onEvent("done", mockArticle);
+      }
+    }, 50);
+
+    return controller;
+  }
+
+  // Real SSE fetch
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL!;
+  const token = getToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal: controller.signal,
+  }).then(async (res) => {
+    if (res.status === 401) {
+      clearToken();
+      window.location.href = "/login";
+      return;
+    }
+    if (!res.ok) {
+      onError?.(new Error(`API error: ${res.status}`));
+      return;
+    }
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE events from buffer
+      const lines = buffer.split("\n");
+      buffer = "";
+      let currentEvent = "";
+      let currentData = "";
+
+      for (const line of lines) {
+        if (line.startsWith("event:")) {
+          currentEvent = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          currentData = line.slice(5).trim();
+        } else if (line === "" && currentEvent && currentData) {
+          try {
+            onEvent(currentEvent, JSON.parse(currentData));
+          } catch {
+            onEvent(currentEvent, currentData);
+          }
+          currentEvent = "";
+          currentData = "";
+        } else if (line !== "") {
+          // Incomplete event, keep in buffer
+          buffer = line + "\n";
+        }
+      }
+    }
+  }).catch((err) => {
+    if (err.name !== "AbortError") onError?.(err);
+  });
+
+  return controller;
 }

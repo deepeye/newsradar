@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { KOLProfile } from "@/lib/types/kol";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, Power, PowerOff } from "lucide-react";
-import { useDeleteKOL, useToggleKOL } from "@/lib/api/queries/kol";
+import { Trash2, Power, PowerOff, Play } from "lucide-react";
+import { useDeleteKOL, useToggleKOL, useCollectKOL } from "@/lib/api/queries/kol";
+import { useQueryClient } from "@tanstack/react-query";
 
 function formatCount(n?: number): string {
   if (!n) return "0";
@@ -32,17 +34,36 @@ interface KOLCardProps {
 export function KOLCard({ kol }: KOLCardProps) {
   const deleteKOL = useDeleteKOL();
   const toggleKOL = useToggleKOL();
+  const collectKOL = useCollectKOL();
+  const qc = useQueryClient();
+  const [collecting, setCollecting] = useState(false);
+
+  useEffect(() => {
+    if (!collecting) return;
+    const timer = setTimeout(() => {
+      setCollecting(false);
+      qc.invalidateQueries({ queryKey: ["kol"] });
+    }, 90000);
+    return () => clearTimeout(timer);
+  }, [collecting, qc]);
+
+  const handleCollect = () => {
+    setCollecting(true);
+    collectKOL.mutate(kol.sourceId, {
+      onError: () => setCollecting(false),
+    });
+  };
   const platformLabel = kol.platform === "weibo" ? "微博" : "X";
   const cookieStatus = kol.cookieStatus || { active: 0, invalid: 0, expired: 0 };
   const hasCookie = cookieStatus.active > 0;
 
   return (
-    <Card>
+    <Card className="shadow-card">
       <CardContent className="space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-full bg-brand/20 flex items-center justify-center text-brand font-bold text-sm shrink-0">
+            <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-sm shrink-0">
               {kol.screenName.charAt(0)}
             </div>
             <div className="min-w-0">
@@ -52,9 +73,9 @@ export function KOLCard({ kol }: KOLCardProps) {
               </div>
             </div>
           </div>
-          <Badge variant={kol.platform === "weibo" ? "default" : "secondary"}>
+          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${kol.platform === "x" ? "badge-platform-x" : "badge-platform-weibo"}`}>
             {platformLabel}
-          </Badge>
+          </span>
         </div>
 
         {/* Stats */}
@@ -67,14 +88,14 @@ export function KOLCard({ kol }: KOLCardProps) {
 
         {/* Bio */}
         {kol.bio && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{kol.bio}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{kol.bio}</p>
         )}
 
         {/* Status row */}
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <span
-              className={`h-2 w-2 rounded-full ${kol.isActive && hasCookie ? "bg-green-500" : "bg-yellow-500"}`}
+              className={`h-2 w-2 rounded-full ${kol.isActive && hasCookie ? "status-dot-active" : "bg-yellow-500"}`}
             />
             <span className="text-muted-foreground">
               {timeAgo(kol.lastSyncedAt)}
@@ -99,6 +120,16 @@ export function KOLCard({ kol }: KOLCardProps) {
               <Power className="h-3 w-3" />
             )}
             {kol.isActive ? "暂停" : "启用"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={handleCollect}
+            disabled={collecting}
+          >
+            <Play className="h-3 w-3" />
+            {collecting ? "采集中" : "采集"}
           </Button>
           <Button
             variant="ghost"

@@ -1,26 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { useDashboardData } from "@/lib/api/queries/dashboard";
 import { TrendingGrid } from "@/components/dashboard/trending-grid";
 import { KOLSection } from "@/components/dashboard/kol-section";
 import { AIAssistantCard } from "@/components/dashboard/ai-assistant-card";
 import { StatsBar } from "@/components/dashboard/stats-bar";
 import { SectionHeader } from "@/components/shared/section-header";
-import { cn } from "@/lib/utils";
 import { TrendingUp, Flame } from "lucide-react";
-import type { CategoryFilter } from "@/lib/types";
-
-const categoryFilters: { key: CategoryFilter; label: string }[] = [
-  { key: "all", label: "全部" },
-  { key: "society", label: "社会" },
-  { key: "tech", label: "科技" },
-  { key: "finance", label: "财经" },
-];
 
 export default function DashboardPage() {
   const { data, isLoading } = useDashboardData();
-  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("all");
 
   if (isLoading || !data) {
     return (
@@ -38,24 +27,6 @@ export default function DashboardPage() {
         title="首页热榜聚合"
         subtitle="Real-time cross-platform newsroom pulse."
       />
-
-      {/* Category filter tabs */}
-      <div className="flex items-center gap-2">
-        {categoryFilters.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setActiveCategory(f.key)}
-            className={cn(
-              "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-              activeCategory === f.key
-                ? "bg-brand text-white"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
 
       {/* Trending grid */}
       <TrendingGrid cards={data.trendingCards} />

@@ -49,7 +49,7 @@ class KOLService:
 
         items = []
         for p in profiles:
-            cookie_status = await self._get_cookie_status(p.source_id)
+            cookie_status = await self._get_cookie_status(p.platform)
             items.append(self._to_response(p, cookie_status))
 
         return KOLListResponse(total=total, items=items)
@@ -58,7 +58,7 @@ class KOLService:
         profile = await self.kol_repo.get_by_id(kol_id)
         if not profile:
             raise NotFoundException("KOL profile not found")
-        cookie_status = await self._get_cookie_status(profile.source_id)
+        cookie_status = await self._get_cookie_status(profile.platform)
         return self._to_response(profile, cookie_status)
 
     async def create_kol(self, request: KOLCreate) -> KOLResponse:
@@ -95,11 +95,11 @@ class KOLService:
 
         # Import cookies if provided
         if request.cookies:
-            await self.cookie_repo.add_cookie(source.id, request.cookies, platform=request.platform)
+            await self.cookie_repo.add_cookie(request.cookies, platform=request.platform)
 
         await self.session.commit()
 
-        cookie_status = await self._get_cookie_status(source.id)
+        cookie_status = await self._get_cookie_status(request.platform)
         return self._to_response(profile, cookie_status)
 
     async def update_kol(self, kol_id: UUID, request: KOLUpdate) -> KOLResponse:
@@ -130,7 +130,7 @@ class KOLService:
 
         await self.session.commit()
 
-        cookie_status = await self._get_cookie_status(profile.source_id)
+        cookie_status = await self._get_cookie_status(profile.platform)
         return self._to_response(profile, cookie_status)
 
     async def delete_kol(self, kol_id: UUID) -> bool:
@@ -151,18 +151,13 @@ class KOLService:
         if not profile:
             raise NotFoundException("KOL profile not found")
 
-        entry = await self.cookie_repo.add_cookie(profile.source_id, cookies, platform=profile.platform)
+        entry = await self.cookie_repo.add_cookie(cookies, platform=profile.platform)
         await self.session.commit()
         return {"id": str(entry.id), "status": entry.status}
 
     async def import_platform_cookies(self, platform: str, cookies: dict) -> dict:
         """Import cookies for a platform (shared across all KOLs of that platform)"""
-        # Find any KOL of this platform to use its source_id
-        profiles = await self.kol_repo.get_by_platform(platform, limit=1)
-        if not profiles:
-            raise NotFoundException(f"No KOL found for platform {platform}")
-        source_id = profiles[0].source_id
-        entry = await self.cookie_repo.add_cookie(source_id, cookies, platform=platform)
+        entry = await self.cookie_repo.add_cookie(cookies, platform=platform)
         await self.session.commit()
         return {"id": str(entry.id), "status": entry.status}
 
@@ -242,9 +237,9 @@ class KOLService:
             })
         return result
 
-    async def _get_cookie_status(self, source_id) -> dict:
-        """Count cookies by status for a source"""
-        entries = await self.cookie_repo.get_by_source(source_id)
+    async def _get_cookie_status(self, platform: str) -> dict:
+        """Count cookies by status for a platform (cookies are shared across all KOLs of the same platform)"""
+        entries = await self.cookie_repo.get_by_platform(platform)
         active = sum(1 for e in entries if e.status == "active")
         invalid = sum(1 for e in entries if e.status == "invalid")
         expired = sum(1 for e in entries if e.status == "expired")

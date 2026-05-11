@@ -51,8 +51,8 @@ export function CookieImportDialog({ kol, onClose }: CookieImportDialogProps) {
               onChange={(e) => setCookieText(e.target.value)}
               placeholder={
                 kol.platform === "weibo"
-                  ? '从浏览器 DevTools > Application > Cookies 复制\n支持格式：SUB=xxx; SUBP=yyy\n或 JSON：{"SUB": "xxx", "SUBP": "yyy"}'
-                  : '从浏览器 DevTools > Application > Cookies 复制\n支持格式：auth_token=xxx; ct0=yyy\n或 JSON：{"auth_token": "xxx", "ct0": "yyy"}'
+                  ? '从浏览器 DevTools > Application > Cookies 复制\n例如：SUB=xxx; SUBP=yyy\n也支持 JSON 格式'
+                  : '从浏览器 DevTools > Application > Cookies 复制完整 Cookie\n例如：auth_token=xxx; ct0=yyy; twid=u%3D123; kdt=abc\n也支持 JSON 格式'
               }
               rows={6}
               className="w-full px-3 py-2 rounded-lg border border-outline-variant/50 bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"

@@ -17,15 +17,15 @@ interface CopilotSuggestionProps {
 
 export function CopilotSuggestion({ suggestion, onAccept, onReject }: CopilotSuggestionProps) {
   return (
-    <div className="p-3 rounded-md bg-card shadow-card space-y-2">
+    <div className="p-3 rounded-md bg-card shadow-card space-y-2 border border-outline-variant/20">
       <div className="flex items-center justify-between">
-        <Badge className={`${typeColors[suggestion.type]} text-xs`}>
+        <Badge className={`${typeColors[suggestion.type]} text-xs border-0`}>
           {suggestion.type === "grammar" ? "语法" : suggestion.type === "style" ? "风格" : "事实"}
         </Badge>
       </div>
-      <p className="text-xs text-muted-foreground">{suggestion.reason}</p>
+      <p className="text-xs text-muted-foreground leading-relaxed">{suggestion.reason}</p>
       <div className="space-y-1.5">
-        <p className="text-sm text-foreground/60 line-through decoration-muted-foreground/30">
+        <p className="text-sm text-foreground/50 line-through decoration-muted-foreground/30">
           {suggestion.original}
         </p>
         <p className="text-sm text-brand font-medium">

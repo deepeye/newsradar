@@ -8,8 +8,8 @@ interface TrendingGridProps {
 export function TrendingGrid({ cards }: TrendingGridProps) {
   return (
     <div className="grid grid-cols-2 gap-md">
-      {cards.map((card) => (
-        <TrendingCard key={card.platform} card={card} />
+      {cards.map((card, i) => (
+        <TrendingCard key={`${card.platform}-${i}`} card={card} />
       ))}
     </div>
   );

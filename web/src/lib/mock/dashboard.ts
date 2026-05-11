@@ -16,7 +16,7 @@ export const dashboardData: DashboardData = {
     },
     {
       platform: "douyin",
-      platformLabel: "抖音热榜",
+      platformLabel: "抖音热点",
       items: [
         { id: "dy1", rank: 1, title: "被这组绝美航拍惊艳到了", heatValue: "8,432,109", status: "explosive" },
         { id: "dy2", rank: 2, title: "当南方人第一次看到暴雪", heatValue: "6,543,210", status: "rank_up" },
@@ -46,6 +46,36 @@ export const dashboardData: DashboardData = {
       ],
       lastUpdated: "2分钟前",
     },
+    {
+      platform: "bilibili",
+      platformLabel: "B站热门",
+      items: [
+        { id: "bl1", rank: 1, title: "全网最硬核的航拍合集", heatValue: "4,567,890", status: "explosive" },
+        { id: "bl2", rank: 2, title: "这期科普把量子力学讲明白了", heatValue: "3,210,987", status: "rank_up" },
+        { id: "bl3", rank: 3, title: "当代年轻人的硬核装修实录", heatValue: "2,876,543", status: "new" },
+      ],
+      lastUpdated: "6分钟前",
+    },
+    {
+      platform: "toutiao",
+      platformLabel: "头条热榜",
+      items: [
+        { id: "tt1", rank: 1, title: "多地推出购房补贴新政", heatValue: "3,876,543", status: "explosive" },
+        { id: "tt2", rank: 2, title: "春季养生食谱大公开", heatValue: "2,543,210", status: "rank_up" },
+        { id: "tt3", rank: 3, title: "国产新能源车销量再创新高", heatValue: "1,987,654", status: "stable" },
+      ],
+      lastUpdated: "4分钟前",
+    },
+    {
+      platform: "pengpai",
+      platformLabel: "澎湃热榜",
+      items: [
+        { id: "pp1", rank: 1, title: "长三角一体化最新进展", heatValue: "2,109,876", status: "rank_up" },
+        { id: "pp2", rank: 2, title: "深度报道：乡村振兴新样本", heatValue: "1,654,321", status: "new" },
+        { id: "pp3", rank: 3, title: "城市治理创新的上海经验", heatValue: "1,234,567", status: "stable" },
+      ],
+      lastUpdated: "7分钟前",
+    },
   ],
   kolColumns: [
     {
@@ -71,32 +101,6 @@ export const dashboardData: DashboardData = {
           shares: 112,
           comments: 89,
           timeAgo: "1小时前",
-        },
-      ],
-    },
-    {
-      platform: "twitter",
-      platformLabel: "Twitter KOL",
-      posts: [
-        {
-          id: "k3",
-          author: "TechCrunch News",
-          verified: true,
-          content: "SpaceX launches another batch of Starlink satellites, bringing total constellation to over 6,000 units. Global coverage milestone expected by Q3.",
-          likes: 15400,
-          shares: 2100,
-          comments: 432,
-          timeAgo: "22分钟前",
-        },
-        {
-          id: "k4",
-          author: "Alex Hormozi",
-          verified: true,
-          content: "Focus on one product, one market, one channel until you hit $1M. Most founders fail by doing too much too soon.",
-          likes: 8200,
-          shares: 940,
-          comments: 210,
-          timeAgo: "3小时前",
         },
       ],
     },

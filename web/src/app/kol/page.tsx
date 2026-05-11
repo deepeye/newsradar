@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useKOLList, useKOLPosts } from "@/lib/api/queries/kol";
+import { useKOLList, useKOLPosts, useCollectAllKOLs } from "@/lib/api/queries/kol";
 import { SectionHeader } from "@/components/shared/section-header";
 import { KOLCard } from "@/components/kol/kol-card";
 import { AddKOLDialog } from "@/components/kol/add-kol-dialog";
@@ -9,7 +9,7 @@ import { CookieManager } from "@/components/kol/cookie-manager";
 import { KOLPosts } from "@/components/kol/kol-posts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus } from "lucide-react";
+import { Users, Plus, Play } from "lucide-react";
 import type { KOLProfile } from "@/lib/types/kol";
 
 const platformFilters = [
@@ -25,6 +25,8 @@ export default function KOLPage() {
   const [platformFilter, setPlatformFilter] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedKolId, setSelectedKolId] = useState<string | null>(null);
+
+  const collectAll = useCollectAllKOLs();
 
   const { data, isLoading } = useKOLList(platformFilter || undefined);
   const { data: postsData } = useKOLPosts(selectedKolId || "");
@@ -48,10 +50,31 @@ export default function KOLPage() {
           title="KOL 监控"
           subtitle="跨平台意见领袖动态追踪"
         />
-        <Button onClick={() => setAddDialogOpen(true)} className="gap-1">
-          <Plus className="h-4 w-4" />
-          添加 KOL
-        </Button>
+        <div className="flex items-center gap-2">
+          {collectAll.isSuccess && (
+            <span className="text-sm text-muted-foreground">
+              已触发 {collectAll.data?.count} 个 KOL
+            </span>
+          )}
+          {collectAll.isError && (
+            <span className="text-sm text-destructive">
+              启动失败
+            </span>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => collectAll.mutate()}
+            disabled={collectAll.isPending}
+            className="gap-1"
+          >
+            <Play className="h-4 w-4" />
+            {collectAll.isPending ? "启动中..." : "启动采集"}
+          </Button>
+          <Button onClick={() => setAddDialogOpen(true)} className="gap-1">
+            <Plus className="h-4 w-4" />
+            添加 KOL
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}

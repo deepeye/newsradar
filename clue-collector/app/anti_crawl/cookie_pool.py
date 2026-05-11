@@ -1,4 +1,4 @@
-"""Cookie池管理 - 数据库存储，支持多Cookie轮换"""
+"""Cookie池管理 - 数据库存储，按平台共享，支持多Cookie轮换"""
 import random
 from typing import Optional, Dict, List
 from datetime import datetime, timezone, timedelta
@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 
 class CookiePool:
-    """Cookie池 - 数据库存储，支持多Cookie轮换"""
+    """Cookie池 - 按平台组织，数据库存储，支持多Cookie轮换"""
 
     def __init__(self):
         self._initialized = False
@@ -32,11 +32,10 @@ class CookiePool:
 
     async def add_cookie(
         self,
-        source_id: str,
         cookies: Dict[str, str],
+        platform: str,
         name: Optional[str] = None,
         expires_days: Optional[int] = None,
-        platform: Optional[str] = None,
     ) -> UUID:
         """添加单个Cookie"""
         async with db_manager.session() as session:
@@ -45,7 +44,6 @@ class CookiePool:
                 expires_at = datetime.now(timezone.utc) + timedelta(days=expires_days)
 
             cookie_entry = CookieEntry(
-                source_id=UUID(source_id),
                 cookies=cookies,
                 name=name,
                 platform=platform,
@@ -57,68 +55,50 @@ class CookiePool:
 
             logger.info("cookie_added",
                        cookie_id=str(cookie_entry.id),
-                       source_id=source_id,
+                       platform=platform,
                        name=name,
                        expires_days=expires_days)
             return cookie_entry.id
 
     async def add_cookies_batch(
         self,
-        source_id: str,
         cookies_list: List[Dict[str, str]],
+        platform: str,
         expires_days: Optional[int] = None,
-        platform: Optional[str] = None
     ) -> List[UUID]:
         """批量添加Cookie"""
         ids = []
         for i, cookies in enumerate(cookies_list):
             cookie_id = await self.add_cookie(
-                source_id=source_id,
                 cookies=cookies,
+                platform=platform,
                 name=f"Cookie-{i+1}",
                 expires_days=expires_days,
-                platform=platform
             )
             ids.append(cookie_id)
-        logger.info("cookies_batch_added", source_id=source_id, count=len(ids))
+        logger.info("cookies_batch_added", platform=platform, count=len(ids))
         return ids
 
-    async def get_cookie(self, source_id: str, platform: Optional[str] = None) -> tuple[Optional[Dict[str, str]], Optional[UUID]]:
-        """获取一个可用Cookie（轮换策略：随机选择 + 成功率优先）
+    async def get_cookie(self, platform: str) -> tuple[Optional[Dict[str, str]], Optional[UUID]]:
+        """获取一个可用Cookie（按平台查找，轮换策略：随机选择 + 成功率优先）
 
         Returns: (cookies_dict, cookie_id) — cookie_id for reporting success/failure.
-        When platform="x" or "weibo": share cookies across all same-platform sources.
-        Otherwise: only find cookies bound to this source_id.
         """
         async with db_manager.session() as session:
-            # X/Weibo platforms: share cookies across all same-platform sources
-            if platform in ("x", "weibo"):
-                result = await session.execute(
-                    select(CookieEntry)
-                    .where(CookieEntry.platform == "x")
-                    .where(CookieEntry.status == "active")
-                    .where(
-                        (CookieEntry.expires_at == None) |
-                        (CookieEntry.expires_at > datetime.now(timezone.utc))
-                    )
-                    .order_by(CookieEntry.success_count.desc(), CookieEntry.use_count.asc())
+            result = await session.execute(
+                select(CookieEntry)
+                .where(CookieEntry.platform == platform)
+                .where(CookieEntry.status == "active")
+                .where(
+                    (CookieEntry.expires_at == None) |
+                    (CookieEntry.expires_at > datetime.now(timezone.utc))
                 )
-            else:
-                # Per-source lookup (weibo, etc.)
-                result = await session.execute(
-                    select(CookieEntry)
-                    .where(CookieEntry.source_id == UUID(source_id))
-                    .where(CookieEntry.status == "active")
-                    .where(
-                        (CookieEntry.expires_at == None) |
-                        (CookieEntry.expires_at > datetime.now(timezone.utc))
-                    )
-                    .order_by(CookieEntry.success_count.desc(), CookieEntry.use_count.asc())
-                )
+                .order_by(CookieEntry.success_count.desc(), CookieEntry.use_count.asc())
+            )
             cookies = result.scalars().all()
 
             if not cookies:
-                logger.debug("no_available_cookies", source_id=source_id, platform=platform)
+                logger.debug("no_available_cookies", platform=platform)
                 return None, None
 
             # Selection strategy: prefer "perfect" cookies, otherwise random from top 3
@@ -141,18 +121,16 @@ class CookiePool:
 
             logger.debug("cookie_selected",
                         cookie_id=str(selected.id),
-                        source_id=source_id,
                         platform=platform,
-                        cookie_source_id=str(selected.source_id),
                         use_count=selected.use_count)
             return selected.cookies, selected.id
 
-    async def get_all_cookies(self, source_id: str) -> List[CookieEntry]:
-        """获取数据源所有Cookie"""
+    async def get_all_cookies(self, platform: str) -> List[CookieEntry]:
+        """获取平台所有Cookie"""
         async with db_manager.session() as session:
             result = await session.execute(
                 select(CookieEntry)
-                .where(CookieEntry.source_id == UUID(source_id))
+                .where(CookieEntry.platform == platform)
                 .order_by(CookieEntry.created_at.desc())
             )
             return list(result.scalars().all())
@@ -214,17 +192,17 @@ class CookiePool:
             logger.info("cookie_invalidated", cookie_id=str(cookie_id))
             return result.rowcount > 0
 
-    async def invalidate_source_cookies(self, source_id: str) -> int:
-        """失效某个数据源的所有Cookie"""
+    async def invalidate_platform_cookies(self, platform: str) -> int:
+        """失效某个平台的所有Cookie"""
         async with db_manager.session() as session:
             result = await session.execute(
                 update(CookieEntry)
-                .where(CookieEntry.source_id == UUID(source_id))
+                .where(CookieEntry.platform == platform)
                 .where(CookieEntry.status == "active")
                 .values(status="invalid")
             )
             await session.commit()
-            logger.info("source_cookies_invalidated", source_id=source_id, count=result.rowcount)
+            logger.info("platform_cookies_invalidated", platform=platform, count=result.rowcount)
             return result.rowcount
 
     async def delete_cookie(self, cookie_id: UUID) -> bool:
@@ -236,19 +214,20 @@ class CookiePool:
             await session.commit()
             return result.rowcount > 0
 
-    async def get_available_sources(self) -> List[str]:
-        """获取有可用Cookie的数据源列表"""
+    async def get_available_platforms(self) -> List[str]:
+        """获取有可用Cookie的平台列表"""
         async with db_manager.session() as session:
             result = await session.execute(
-                select(CookieEntry.source_id)
+                select(CookieEntry.platform)
                 .where(CookieEntry.status == "active")
                 .where(
                     (CookieEntry.expires_at == None) |
                     (CookieEntry.expires_at > datetime.now(timezone.utc))
                 )
+                .where(CookieEntry.platform != None)
                 .distinct()
             )
-            return [str(row[0]) for row in result.all()]
+            return [row[0] for row in result.all()]
 
     async def cleanup_expired(self) -> int:
         """清理过期Cookie"""
@@ -281,8 +260,8 @@ class CookiePool:
                 logger.info("invalid_cookies_cleaned", count=cleaned)
             return cleaned
 
-    async def get_stats(self, source_id: str) -> Dict:
-        """获取Cookie池统计"""
+    async def get_stats(self, platform: str) -> Dict:
+        """获取平台Cookie池统计"""
         async with db_manager.session() as session:
             result = await session.execute(
                 select(
@@ -293,7 +272,7 @@ class CookiePool:
                     func.sum(CookieEntry.use_count).label("total_uses"),
                     func.sum(CookieEntry.success_count).label("total_success"),
                 )
-                .where(CookieEntry.source_id == UUID(source_id))
+                .where(CookieEntry.platform == platform)
             )
             row = result.one()
             return {

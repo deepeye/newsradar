@@ -78,11 +78,10 @@ class CookieRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add_cookie(self, source_id: UUID, cookies: dict, name: str = None, platform: str = None) -> CookieEntry:
+    async def add_cookie(self, cookies: dict, platform: str, name: str = None) -> CookieEntry:
         now = datetime.now(timezone.utc)
         entry = CookieEntry(
             id=uuid4(),
-            source_id=source_id,
             cookies=cookies,
             name=name or "imported",
             platform=platform,
@@ -97,12 +96,6 @@ class CookieRepository:
         await self.session.flush()
         await self.session.refresh(entry)
         return entry
-
-    async def get_by_source(self, source_id: UUID) -> Sequence[CookieEntry]:
-        result = await self.session.execute(
-            select(CookieEntry).where(CookieEntry.source_id == source_id).order_by(CookieEntry.created_at.desc())
-        )
-        return result.scalars().all()
 
     async def get_by_platform(self, platform: str) -> Sequence[CookieEntry]:
         result = await self.session.execute(

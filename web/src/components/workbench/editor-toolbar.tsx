@@ -8,6 +8,8 @@ import {
   Quote,
   ImageIcon,
   Link2,
+  PenLine,
+  Loader2,
 } from "lucide-react";
 
 const toolbarItems = [
@@ -21,7 +23,12 @@ const toolbarItems = [
   { icon: Link2, label: "插入链接" },
 ];
 
-export function EditorToolbar() {
+interface EditorToolbarProps {
+  onContinueWriting?: () => void;
+  isContinuingWriting?: boolean;
+}
+
+export function EditorToolbar({ onContinueWriting, isContinuingWriting }: EditorToolbarProps) {
   return (
     <div className="flex items-center gap-1 py-2 px-3 bg-card rounded-md shadow-card border-b border-outline-variant/20">
       {toolbarItems.map((item, i) => (
@@ -43,6 +50,22 @@ export function EditorToolbar() {
       >
         清除格式
       </Button>
+      {onContinueWriting && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onContinueWriting}
+          disabled={isContinuingWriting}
+          className="ml-auto text-xs border-brand/40 text-brand hover:bg-brand/10 hover:border-brand/60"
+        >
+          {isContinuingWriting ? (
+            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+          ) : (
+            <PenLine className="h-3.5 w-3.5 mr-1" />
+          )}
+          {isContinuingWriting ? "续写中..." : "续写"}
+        </Button>
+      )}
     </div>
   );
 }

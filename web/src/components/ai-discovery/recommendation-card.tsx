@@ -20,7 +20,7 @@ export function RecommendationCard({ recommendation, onGenerateOutline, isGenera
   const Icon = tagIcons[recommendation.sourceIcon] || TrendingUp;
 
   return (
-    <Card className="bg-card shadow-card hover:shadow-card-hover transition-shadow border-0">
+    <Card className="card-editorial bg-card shadow-card hover:shadow-card-hover border-0">
       <CardContent className="p-lg space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -31,7 +31,7 @@ export function RecommendationCard({ recommendation, onGenerateOutline, isGenera
             <Icon className="h-3 w-3 mr-1" />
             {recommendation.tag}
           </Badge>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-muted-foreground/70">
             {recommendation.source}
           </span>
         </div>
@@ -41,17 +41,17 @@ export function RecommendationCard({ recommendation, onGenerateOutline, isGenera
           {recommendation.title}
         </h3>
 
-        {/* AI Reason */}
-        <div className="p-3 rounded-md bg-brand/5 border-l-2 border-brand">
-          <p className="text-xs text-muted-foreground mb-1 font-medium">
+        {/* AI Reason — editorial accent bar */}
+        <div className="editorial-accent p-3 rounded-r-md bg-brand/5">
+          <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wide">
             AI 推荐理由
           </p>
-          <p className="text-sm text-foreground/90">{recommendation.reason}</p>
+          <p className="text-sm text-foreground/90 leading-relaxed">{recommendation.reason}</p>
         </div>
 
         {/* Suggested angles */}
         <div>
-          <p className="text-xs text-muted-foreground mb-2 font-medium">
+          <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
             建议报道角度
           </p>
           <div className="space-y-2">

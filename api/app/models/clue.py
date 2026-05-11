@@ -95,6 +95,7 @@ class DataSource(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     type: Mapped[DataSourceType] = mapped_column(Enum(DataSourceType), nullable=False)
     collector_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    platform: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

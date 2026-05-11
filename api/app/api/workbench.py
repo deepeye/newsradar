@@ -1,6 +1,8 @@
 """Workbench API router"""
+import json
 from uuid import UUID
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -11,6 +13,11 @@ from app.schemas.workbench import (
     ArticleResponse,
     ArticleCreateRequest,
     ArticleUpdateRequest,
+    ContinueWritingResponse,
+    TranslateRequest,
+    TranslateResponse,
+    GenerateArticleFromOutlineRequest,
+    FactCheckResponse,
 )
 from app.core.exceptions import NotFoundException
 
@@ -39,6 +46,39 @@ async def get_article(
     if not result:
         raise NotFoundException("Article not found")
     return result
+
+
+@router.post("/articles/generate-from-outline", response_model=ArticleResponse)
+async def generate_article_from_outline(
+    request: GenerateArticleFromOutlineRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = WorkbenchService(db)
+    return await service.generate_article_from_outline(
+        outline_id=UUID(request.outline_id),
+        headline_index=request.headline_index,
+        author_id=UUID(current_user["id"]),
+    )
+
+
+@router.post("/articles/generate-from-outline-stream")
+async def generate_article_from_outline_stream(
+    request: GenerateArticleFromOutlineRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = WorkbenchService(db)
+
+    async def event_generator():
+        async for event in service.generate_article_from_outline_stream(
+            outline_id=UUID(request.outline_id),
+            headline_index=request.headline_index,
+            author_id=UUID(current_user["id"]),
+        ):
+            yield f"event: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.post("/articles", response_model=ArticleResponse)
@@ -107,6 +147,46 @@ async def ai_metrics(
 ):
     service = WorkbenchService(db)
     result = await service.ai_metrics(article_id)
+    if result is None:
+        raise NotFoundException("Article not found")
+    return result
+
+
+@router.post("/articles/{article_id}/ai-continue-writing", response_model=ContinueWritingResponse)
+async def ai_continue_writing(
+    article_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = WorkbenchService(db)
+    result = await service.ai_continue_writing(article_id)
+    if result is None:
+        raise NotFoundException("Article not found")
+    return result
+
+
+@router.post("/articles/{article_id}/ai-translate", response_model=TranslateResponse)
+async def ai_translate(
+    article_id: UUID,
+    request: TranslateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = WorkbenchService(db)
+    result = await service.ai_translate(article_id, request.target_language)
+    if result is None:
+        raise NotFoundException("Article not found")
+    return result
+
+
+@router.post("/articles/{article_id}/ai-fact-check", response_model=FactCheckResponse)
+async def ai_fact_check(
+    article_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = WorkbenchService(db)
+    result = await service.ai_fact_check(article_id)
     if result is None:
         raise NotFoundException("Article not found")
     return result

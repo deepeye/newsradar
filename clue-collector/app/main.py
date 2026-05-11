@@ -4,6 +4,7 @@ import signal
 from contextlib import asynccontextmanager
 
 import structlog
+import uvicorn
 
 from app.config import settings
 from app.storage import db_manager
@@ -11,6 +12,7 @@ from app.scheduler import task_queue, scheduler, task_runner
 from app.anti_crawl import anti_crawl
 from app.utils import configure_logging
 from app.collectors.adaptors.playwright_adaptor import playwright_adaptor
+from app.api_server import app as api_app
 
 
 logger = structlog.get_logger()
@@ -22,6 +24,7 @@ class Application:
     def __init__(self):
         self.running = False
         self._shutdown_event = asyncio.Event()
+        self._api_server = None
 
     async def initialize(self) -> None:
         """初始化应用"""
@@ -52,6 +55,12 @@ class Application:
         await task_runner.start()
         logger.info("task_runner_started")
 
+        # 启动on-demand搜索API
+        config = uvicorn.Config(api_app, host="0.0.0.0", port=8002, log_level="warning")
+        self._api_server = uvicorn.Server(config)
+        asyncio.create_task(self._api_server.serve())
+        logger.info("api_server_started", port=8002)
+
     async def shutdown(self) -> None:
         """关闭应用"""
         logger.info("application_shutting_down")
@@ -61,6 +70,11 @@ class Application:
         # 停止任务执行器
         await task_runner.stop()
         logger.info("task_runner_stopped")
+
+        # 停止API服务器
+        if self._api_server:
+            self._api_server.should_exit = True
+            logger.info("api_server_stopping")
 
         # 停止调度器
         await scheduler.stop()

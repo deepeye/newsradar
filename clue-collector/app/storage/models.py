@@ -110,6 +110,10 @@ class DataSource(Base):
     collector_type: Mapped[str] = mapped_column(
         String(20), nullable=False
     )
+    platform: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True,
+        comment="平台标识 (x/weibo)"
+    )
     config: Mapped[dict] = mapped_column(
         JSONB, nullable=False, default=dict,
         comment="采集配置（URL、解析规则等）"
@@ -161,6 +165,7 @@ class DataSource(Base):
         Index("ix_data_sources_type", "type"),
         Index("ix_data_sources_status", "status"),
         Index("ix_data_sources_is_active", "is_active"),
+        Index("ix_data_sources_platform", "platform"),
     )
 
     def __repr__(self) -> str:
@@ -360,10 +365,6 @@ class CookieEntry(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    source_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False,
-        comment="数据源ID"
-    )
     cookies: Mapped[dict] = mapped_column(
         JSONB, nullable=False,
         comment="Cookie字典"
@@ -418,14 +419,12 @@ class CookieEntry(Base):
 
     # 索引
     __table_args__ = (
-        Index("ix_cookie_pool_source_id", "source_id"),
         Index("ix_cookie_pool_status", "status"),
-        Index("ix_cookie_pool_source_status", "source_id", "status"),
         Index("ix_cookie_pool_platform_status", "platform", "status"),
     )
 
     def __repr__(self) -> str:
-        return f"<CookieEntry(id={self.id}, source_id={self.source_id}, status={self.status})>"
+        return f"<CookieEntry(id={self.id}, platform={self.platform}, status={self.status})>"
 
     def success_rate(self) -> float:
         """计算成功率"""

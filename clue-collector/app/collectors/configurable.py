@@ -211,12 +211,16 @@ class ConfigurableCollector(BaseCollector):
                 # 提取作者/来源
                 author = self._extract_css_text(element, rules.get("author", ""))
 
+                # 提取摘要/片段
+                snippet = self._extract_css_text(element, rules.get("snippet", ""))
+
                 clue = ClueData(
                     title=title,
                     url=link,
                     author=author,
                     rank=rank,
                     heat_value=heat_value,
+                    original_content=snippet,
                 )
                 items.append(clue)
             except Exception as e:

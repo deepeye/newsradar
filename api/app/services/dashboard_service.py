@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import db_manager
+from app.models.clue import DataSourceType
 from app.repositories.clue_repo import ClueRepository, DataSourceRepository, SourceGroupRepository
 from app.services.ai_service import AIService
 from app.utils.cache import cache_manager
@@ -15,12 +16,21 @@ import structlog
 logger = structlog.get_logger("dashboard_service")
 
 PLATFORM_LABELS = {
+    "微博热搜": "微博热搜",
+    "抖音热点": "抖音热点",
+    "知乎热榜": "知乎热榜",
+    "百度热搜": "百度热搜",
+    "B站热门": "B站热门",
+    "头条热榜": "头条热榜",
+    "澎湃热榜": "澎湃热榜",
+    # also support English keys from config.platform
     "weibo": "微博热搜",
-    "douyin": "抖音热榜",
+    "douyin": "抖音热点",
     "zhihu": "知乎热榜",
     "baidu": "百度热搜",
     "bilibili": "B站热门",
-    "toutiao": "今日头条",
+    "toutiao": "头条热榜",
+    "pengpai": "澎湃热榜",
 }
 
 
@@ -61,13 +71,27 @@ class DashboardService:
         return result
 
     async def _build_trending_cards(self, sources) -> list[dict]:
-        # Batch-fetch all hot clues at once instead of N+1
-        source_ids = [s.id for s in sources]
+        # Only include hotlist/video sources whose name or config.platform is in PLATFORM_LABELS
+        trending_types = {DataSourceType.HOTLIST, DataSourceType.VIDEO}
+        trending_sources = [
+            s for s in sources
+            if s.type in trending_types
+            and (
+                s.name in PLATFORM_LABELS
+                or (isinstance(s.config, dict) and s.config.get("platform", "") in PLATFORM_LABELS)
+            )
+        ]
+
+        source_ids = [s.id for s in trending_sources]
+        if not source_ids:
+            return []
         all_hot_clues = await self.clue_repo.get_hot_by_sources(source_ids, limit=10)
 
         cards = []
-        for source in sources:
-            platform = source.config.get("platform", source.name.lower()) if isinstance(source.config, dict) else source.name.lower()
+        for source in trending_sources:
+            platform = (
+                source.config.get("platform", source.name) if isinstance(source.config, dict) else source.name
+            )
             clues = all_hot_clues.get(str(source.id), [])
 
             items = []
@@ -89,7 +113,7 @@ class DashboardService:
                     "platform": platform,
                     "platform_label": PLATFORM_LABELS.get(platform, source.name),
                     "items": items,
-                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                    "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 })
 
         return cards

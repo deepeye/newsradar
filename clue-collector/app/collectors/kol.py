@@ -212,36 +212,78 @@ class KOLCollector(BaseCollector):
         try:
             # 无有效 Cookie 时不传递 headers，避免触发 X 反爬
             has_cookies = bool(context.cookies)
+            render_headers = dict(context.headers or {}) if has_cookies else {}
+            # X requires ct0 as x-csrf-token header for authenticated requests
+            if has_cookies and "ct0" in (context.cookies or {}):
+                render_headers["x-csrf-token"] = context.cookies["ct0"]
             render_config = {
-                "headers": context.headers or {} if has_cookies else {},
+                "headers": render_headers,
                 "cookies": context.cookies or {},
                 "user_agent": context.headers.get("User-Agent") if has_cookies and context.headers else None,
             }
+            # 认证模式下等待推文元素加载（X SPA 通过 XHR 动态加载推文）
             render_result = await playwright_adaptor.render(
                 url=f"https://x.com/{username}",
                 config=render_config,
                 timeout=120000,
-                wait_for=None,
-                network_idle=False,
-                extra_wait=8000,
+                wait_for='[data-testid="tweet"]' if has_cookies else None,
+                wait_state="attached" if has_cookies else "attached",
+                network_idle=has_cookies,
+                extra_wait=12000 if has_cookies else 8000,
             )
 
             if not render_result.success:
                 await anti_crawl.report_failure(source_id, cookie_id=context.cookie_id, proxy=context.proxy)
                 return CollectResult(success=False, error_message=render_result.error_message or "Playwright render failed")
 
-            # 检查是否跳转到登录页
-            if "/login" in (render_result.content or "") and 'input[name="text"]' in (render_result.content or ""):
-                await anti_crawl.report_failure(source_id, cookie_id=context.cookie_id, proxy=context.proxy, status_code=401)
-                return CollectResult(success=False, error_message="X requires login - cookie may be expired")
-
-            await anti_crawl.report_success(source_id, cookie_id=context.cookie_id, proxy=context.proxy)
-
             from scrapling import Selector
             doc = Selector(render_result.content)
             tweets = doc.css('[data-testid="tweet"]')
-            logger.info("x_page_debug", content_length=len(render_result.content or ""), tweet_elements=len(tweets), has_login="/login" in (render_result.content or ""))
+            has_login_redirect = "/login" in (render_result.content or "") and 'input[name="text"]' in (render_result.content or "")
+            logger.info("x_page_debug", content_length=len(render_result.content or ""), tweet_elements=len(tweets), has_login=has_login_redirect, has_cookies=has_cookies)
+
+            # Only treat as login-wall if there are zero tweets AND login form present
+            if len(tweets) == 0 and has_login_redirect:
+                await anti_crawl.report_failure(source_id, cookie_id=context.cookie_id, proxy=context.proxy, status_code=401)
+                return CollectResult(success=False, error_message="X requires login - cookie may be expired")
+
+            # Cookie 导致空页面时，回退到无 Cookie 模式重新渲染
+            if len(tweets) == 0 and has_cookies:
+                # Debug: save cookie-rendered HTML for analysis
+                import tempfile
+                debug_path = tempfile.mktemp(suffix=".html", prefix="x_cookie_debug_")
+                with open(debug_path, "w") as f:
+                    f.write(render_result.content or "")
+                logger.warning("x_cookie_page_debug", debug_file=debug_path, content_length=len(render_result.content or ""))
+                logger.info("x_cookie_fallback", reason="0 tweets with cookie, retrying without")
+                fallback_config = {"headers": {}, "cookies": {}, "user_agent": None}
+                fallback_result = await playwright_adaptor.render(
+                    url=f"https://x.com/{username}",
+                    config=fallback_config,
+                    timeout=120000,
+                    wait_for=None,
+                    network_idle=False,
+                    extra_wait=8000,
+                )
+                if fallback_result.success:
+                    doc = Selector(fallback_result.content)
+                    tweets = doc.css('[data-testid="tweet"]')
+                    logger.info("x_fallback_result", content_length=len(fallback_result.content or ""), tweet_elements=len(tweets))
+                    if len(tweets) > 0:
+                        render_result = fallback_result
+                        await anti_crawl.report_failure(source_id, cookie_id=context.cookie_id, proxy=context.proxy, status_code=401)
+                        # Cookie 失效但不阻断采集，标记失败并继续用无 Cookie 结果
+
+            await anti_crawl.report_success(source_id, cookie_id=context.cookie_id, proxy=context.proxy)
             items = self._parse_x_tweets(doc, screen_name, username)
+
+            # Debug: save HTML for analysis if 0 items parsed but tweets found
+            if len(items) == 0 and len(tweets) > 0:
+                import tempfile
+                debug_path = tempfile.mktemp(suffix=".html", prefix="x_debug_")
+                with open(debug_path, "w") as f:
+                    f.write(render_result.content or "")
+                logger.warning("x_parse_debug", tweets_found=len(tweets), items_parsed=len(items), debug_file=debug_path)
 
             return CollectResult(
                 success=True,

@@ -141,3 +141,65 @@
     @apply bg-surface text-on-surface font-sans;
   }
 }
+
+/* Editorial utilities — professional writing environment */
+
+@layer components {
+  .editor-textarea {
+    line-height: 1.85;
+    letter-spacing: 0.02em;
+  }
+
+  .editor-textarea::placeholder {
+    font-style: italic;
+    opacity: 0.35;
+  }
+
+  /* Editorial accent bar — left border for content emphasis */
+  .editorial-accent {
+    border-left: 3px solid var(--color-brand);
+    padding-left: 12px;
+  }
+
+  /* Status dot with pulse animation for active state */
+  .status-dot-active {
+    background: #22c55e;
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+
+  /* Recommendation card hover lift */
+  .card-editorial {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-editorial:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Platform badge — X uses dark, Weibo uses warm */
+  .badge-platform-x {
+    background: #1d1d1f;
+    color: #ffffff;
+    font-weight: 600;
+  }
+  .badge-platform-weibo {
+    background: var(--color-brand);
+    color: #ffffff;
+    font-weight: 600;
+  }
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes loading-bar {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 95%; }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 8s ease-out forwards;
+}

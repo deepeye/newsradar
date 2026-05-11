@@ -87,3 +87,22 @@ export function useToggleKOL() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["kol"] }),
   });
 }
+
+export function useCollectAllKOLs() {
+  return useMutation({
+    mutationFn: () =>
+      fetchFromApi<{ detail: string; count: number }>("/api/kol/collect", {
+        method: "POST",
+      }),
+  });
+}
+
+export function useCollectKOL() {
+  return useMutation({
+    mutationFn: (sourceId: string) =>
+      fetchFromApi<{ detail: string; count: number }>(
+        `/api/kol/${sourceId}/collect`,
+        { method: "POST" }
+      ),
+  });
+}

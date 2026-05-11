@@ -8,6 +8,9 @@ const platformIcons: Record<string, string> = {
   douyin: "抖音",
   zhihu: "知乎",
   baidu: "百度",
+  bilibili: "B站",
+  toutiao: "头条",
+  pengpai: "澎湃",
 };
 
 interface TrendingCardProps {

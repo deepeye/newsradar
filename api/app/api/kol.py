@@ -1,6 +1,10 @@
 """KOL API router"""
+import json
+from datetime import datetime, timezone
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -12,6 +16,9 @@ from app.schemas.kol import (
     KOLPostListResponse,
 )
 from app.core.exceptions import NotFoundException
+from app.models.kol import KOLProfile
+from app.models.clue import DataSource
+from app.utils.cache import cache_manager
 
 router = APIRouter(prefix="/api/kol", tags=["kol"])
 
@@ -53,6 +60,49 @@ async def delete_platform_cookie(
     return {"detail": "Deleted"}
 
 
+@router.post("/collect")
+async def collect_all_kols(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger collection for all active KOL data sources"""
+    result = await db.execute(
+        select(DataSource)
+        .where(DataSource.collector_type == "kol")
+        .where(DataSource.is_active == True)
+    )
+    sources = result.scalars().all()
+    if not sources:
+        return {"detail": "No active KOL sources", "count": 0}
+
+    redis = cache_manager._client
+    if not redis:
+        return {"detail": "Redis not available", "count": 0}
+
+    now = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(timezone.utc).timestamp()
+    count = 0
+    for source in sources:
+        config = source.config or {}
+        task_data = json.dumps({
+            "id": f"{source.id}_{timestamp}",
+            "source_id": str(source.id),
+            "priority": source.priority or 5,
+            "retry_count": 0,
+            "created_at": now,
+            "metadata": {
+                "collector_type": "kol",
+                "source_type": "ACCOUNT",
+                "config": config,
+            },
+        })
+        score = 10 - (source.priority or 5)
+        await redis.zadd("clue_collector:tasks", {task_data: score})
+        count += 1
+
+    return {"detail": f"Triggered {count} KOL sources", "count": count}
+
+
 @router.get("", response_model=KOLListResponse)
 async def list_kols(
     platform: str = Query(None, description="Filter by platform: weibo/x"),
@@ -73,6 +123,44 @@ async def create_kol(
 ):
     service = KOLService(db)
     return await service.create_kol(request)
+
+
+@router.post("/{source_id}/collect")
+async def collect_kol(
+    source_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger collection for a single KOL data source"""
+    result = await db.execute(
+        select(DataSource).where(DataSource.id == source_id)
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise NotFoundException("Data source not found")
+
+    redis = cache_manager._client
+    if not redis:
+        return {"detail": "Redis not available", "count": 0}
+
+    config = source.config or {}
+    timestamp = datetime.now(timezone.utc).timestamp()
+    task_data = json.dumps({
+        "id": f"{source.id}_{timestamp}",
+        "source_id": str(source.id),
+        "priority": source.priority or 5,
+        "retry_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "metadata": {
+            "collector_type": "kol",
+            "source_type": "ACCOUNT",
+            "config": config,
+        },
+    })
+    score = 10 - (source.priority or 5)
+    await redis.zadd("clue_collector:tasks", {task_data: score})
+
+    return {"detail": f"Triggered {source.name}", "count": 1}
 
 
 @router.get("/{kol_id}", response_model=KOLResponse)

@@ -36,9 +36,9 @@ function useImportPlatformCookie() {
       platform: string;
       cookies: Record<string, string>;
     }) =>
-      fetchFromApi(`/api/kol/cookies/import`, {
+      fetchFromApi(`/api/kol/cookies/import?platform=${encodeURIComponent(platform)}`, {
         method: "POST",
-        body: JSON.stringify({ platform, cookies }),
+        body: JSON.stringify({ cookies }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["kol-cookies"] }),
   });
@@ -117,8 +117,8 @@ export function CookieManager() {
   return (
     <div className="space-y-lg">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-lg">
-        {data.map((platform) => (
-          <Card key={platform.platform}>
+        {data.map((platform, i) => (
+          <Card key={`${platform.platform}-${i}`}>
             <CardContent className="space-y-4">
               {/* Platform Header */}
               <div className="flex items-center justify-between">
@@ -193,8 +193,8 @@ export function CookieManager() {
                   <textarea
                     value={cookieText}
                     onChange={(e) => setCookieText(e.target.value)}
-                    placeholder='支持格式：auth_token=xxx; ct0=yyy 或 JSON：{"auth_token": "xxx", "ct0": "yyy"}'
-                    rows={3}
+                    placeholder='从浏览器 DevTools → Application → Cookies 复制完整 Cookie 字符串\n例如：auth_token=xxx; ct0=yyy; twid=u%3D123; kdt=abc\n也支持 JSON 格式：{"auth_token": "xxx", "ct0": "yyy"}'
+                    rows={5}
                     className="w-full px-3 py-2 rounded-lg border border-outline-variant/50 bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
                   />
                   <div className="flex gap-2">

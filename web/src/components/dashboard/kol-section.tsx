@@ -17,8 +17,8 @@ export function KOLSection({ columns }: KOLSectionProps) {
         className="mb-4"
       />
       <div className="grid grid-cols-3 gap-md">
-        {columns.map((col) => (
-          <KOLColumn key={col.platform} column={col} />
+        {columns.map((col, i) => (
+          <KOLColumn key={`${col.platform}-${i}`} column={col} />
         ))}
       </div>
     </section>

@@ -190,9 +190,9 @@ class ClueRepository(BaseRepository):
     async def get_by_hash(self, unique_hash: str) -> Optional[Clue]:
         """根据哈希获取线索"""
         result = await self.session.execute(
-            select(Clue).where(Clue.unique_hash == unique_hash)
+            select(Clue).where(Clue.unique_hash == unique_hash).limit(1)
         )
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def get_by_source(
         self,

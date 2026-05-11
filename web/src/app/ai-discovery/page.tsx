@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAIDiscoveryData, useGenerateOutline, useRefreshDiscovery } from "@/lib/api/queries/ai-discovery";
 import { OrgConfigCard } from "@/components/ai-discovery/org-config-card";
@@ -10,12 +10,25 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight, Clock, RefreshCw } from "lucide-react";
 import type { AITopicRecommendation } from "@/lib/types/ai-discovery";
 
+const LOADING_THRESHOLD = 2000;
+
 export default function AIDiscoveryPage() {
   const { data, isLoading } = useAIDiscoveryData();
   const generateOutline = useGenerateOutline();
   const refreshDiscovery = useRefreshDiscovery();
   const router = useRouter();
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [showLoading, setShowLoading] = useState(false);
+
+  // Only show loading UI after 2s threshold — fast cache hits skip it entirely
+  useEffect(() => {
+    if (!isLoading) {
+      setShowLoading(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowLoading(true), LOADING_THRESHOLD);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   async function handleGenerateOutline(rec: AITopicRecommendation) {
     if (!data?.clueIds?.length) return;
@@ -33,13 +46,26 @@ export default function AIDiscoveryPage() {
     }
   }
 
-  if (isLoading || !data) {
+  if (isLoading && !data && showLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="text-muted-foreground">Loading...</div>
+      <div className="max-w-[1400px] mx-auto px-lg py-lg space-y-lg">
+        {/* Progress bar */}
+        <div className="flex items-center justify-center py-[20vh]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-brand animate-pulse" />
+              <span className="text-sm font-medium text-foreground">AI 正在分析线索，生成选题推荐...</span>
+            </div>
+            <div className="w-64 h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className="h-full rounded-full bg-brand animate-loading-bar" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
+
+  if (!data) return null;
 
   return (
     <div className="max-w-[1400px] mx-auto px-lg py-lg space-y-lg">

@@ -8,7 +8,10 @@ import {
   useCreateArticle,
   useSaveArticle,
   useAISuggest,
-  useAIMetrics,
+  useAIContinueWriting,
+  useAITranslate,
+  useAIFactCheck,
+  useGenerateArticleFromOutlineStream,
 } from "@/lib/api/queries/workbench";
 import { EditorStatusBar } from "@/components/workbench/editor-status-bar";
 import { EditorToolbar } from "@/components/workbench/editor-toolbar";
@@ -16,8 +19,9 @@ import { EditorColumn } from "@/components/workbench/editor-column";
 import { CopilotSidebar } from "@/components/workbench/copilot-sidebar";
 import { AnalysisMetrics } from "@/components/workbench/analysis-metrics";
 import { ToolButtons } from "@/components/workbench/tool-buttons";
+import { HeadlineSelector } from "@/components/workbench/headline-selector";
 import { PenLine } from "lucide-react";
-import type { AISuggestion } from "@/lib/types/workbench";
+import type { AISuggestion, LanguageCode, FactCheckResult } from "@/lib/types/workbench";
 
 function WorkbenchContent() {
   const searchParams = useSearchParams();
@@ -28,37 +32,64 @@ function WorkbenchContent() {
   const [draftContent, setDraftContent] = useState<string>("");
   const [localSuggestions, setLocalSuggestions] = useState<AISuggestion[]>([]);
   const [useLocalSuggestions, setUseLocalSuggestions] = useState(false);
+  const [factCheckResults, setFactCheckResults] = useState<FactCheckResult[]>([]);
+  const [showHeadlineSelector, setShowHeadlineSelector] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const createArticle = useCreateArticle();
+  const generateStream = useGenerateArticleFromOutlineStream();
   const saveArticle = useSaveArticle();
   const aiSuggest = useAISuggest();
-  const aiMetrics = useAIMetrics();
+    const continueWriting = useAIContinueWriting();
+  const aiTranslate = useAITranslate();
+  const aiFactCheck = useAIFactCheck();
   const { data: article, isLoading: articleLoading } = useArticle(articleId);
 
-  // Create article from outline on first load
+  // Show headline selector when outline loads
   useEffect(() => {
     if (!outline || articleId) return;
-    const initContent = outline.leadParagraph
-      ? `# ${outline.title}\n\n${outline.leadParagraph}`
-      : `# ${outline.title}\n\n${outline.summary ?? ""}`;
-
-    createArticle.mutate(
-      {
-        title: outline.title,
-        outlineId: outline.id,
-        targetWordCount: 3000,
-        urgent: outline.urgency === "高",
-      },
-      {
-        onSuccess: (created) => {
-          setArticleId(created.id);
-          setDraftContent(initContent);
-        },
-      }
-    );
-    // eslint-disable-next-line react-hooks/exhaust-deps
+    if (outline.headlines && outline.headlines.length > 0) {
+      setShowHeadlineSelector(true);
+    } else {
+      // No headlines — generate directly with outline title
+      generateStream.mutate(
+        { outlineId: outline.id, headlineIndex: null },
+        {
+          onCreated: (data) => {
+            setArticleId(data.articleId);
+            setDraftContent(`# ${data.title}\n\n${data.leadParagraph ?? ""}\n\n`);
+          },
+          onChunk: (content) => {
+            setDraftContent((prev) => prev + content);
+          },
+          onDone: () => {},
+        }
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outline, articleId]);
+
+  // Handle headline selection
+  const handleHeadlineSelect = useCallback(
+    (headlineIndex: number | null, selectedTitle: string) => {
+      setShowHeadlineSelector(false);
+      if (!outline) return;
+      generateStream.mutate(
+        { outlineId: outline.id, headlineIndex },
+        {
+          onCreated: (data) => {
+            setArticleId(data.articleId);
+            setDraftContent(`# ${data.title}\n\n${data.leadParagraph ?? ""}\n\n`);
+          },
+          onChunk: (content) => {
+            setDraftContent((prev) => prev + content);
+          },
+          onDone: () => {},
+        }
+      );
+    },
+    [outline, generateStream]
+  );
 
   // Sync draft content when article loads
   useEffect(() => {
@@ -146,28 +177,103 @@ function WorkbenchContent() {
     setUseLocalSuggestions(false);
   }, []);
 
-  // AI metrics handler
-  const handleAnalyzeMetrics = useCallback(() => {
+  
+  // Continue writing handler
+  const handleContinueWriting = useCallback(() => {
     if (!articleId) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveArticle.mutate(
       { articleId, content: draftContent },
       {
         onSuccess: () => {
-          aiMetrics.mutate(articleId);
+          continueWriting.mutate(articleId, {
+            onSuccess: (result) => {
+              if (result.continuedContent) {
+                const separator = result.sectionTitle
+                  ? `\n\n## ${result.sectionTitle}\n\n`
+                  : "\n\n";
+                const newContent = draftContent + separator + result.continuedContent;
+                setDraftContent(newContent);
+                triggerSave(newContent);
+              }
+            },
+          });
         },
       }
     );
-  }, [articleId, draftContent, saveArticle, aiMetrics]);
+  }, [articleId, draftContent, saveArticle, continueWriting, triggerSave]);
+
+  // Translate handler
+  const handleTranslate = useCallback(
+    (targetLanguage: LanguageCode) => {
+      if (!articleId) return;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveArticle.mutate(
+        { articleId, content: draftContent },
+        {
+          onSuccess: () => {
+            aiTranslate.mutate(
+              { articleId, targetLanguage },
+              {
+                onSuccess: (result) => {
+                  if (result.translatedContent) {
+                    setDraftContent(result.translatedContent);
+                    triggerSave(result.translatedContent);
+                  }
+                },
+              }
+            );
+          },
+        }
+      );
+    },
+    [articleId, draftContent, saveArticle, aiTranslate, triggerSave]
+  );
+
+  // Fact-check handler
+  const handleFactCheck = useCallback(() => {
+    if (!articleId) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveArticle.mutate(
+      { articleId, content: draftContent },
+      {
+        onSuccess: () => {
+          aiFactCheck.mutate(articleId, {
+            onSuccess: (result) => {
+              if (result.results) {
+                setFactCheckResults(result.results);
+              }
+            },
+          });
+        },
+      }
+    );
+  }, [articleId, draftContent, saveArticle, aiFactCheck]);
+
+  const handleClearFactCheck = useCallback(() => {
+    setFactCheckResults([]);
+  }, []);
 
   // Loading states
-  if (outlineLoading || (!articleId && createArticle.isPending)) {
+  if (outlineLoading || (!articleId && (showHeadlineSelector === false && generateStream.isPending))) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="text-muted-foreground">
-          {createArticle.isPending ? "正在创建文章..." : "Loading..."}
+          {generateStream.isPending ? "正在生成初稿..." : "Loading..."}
         </div>
       </div>
+    );
+  }
+
+  // Show headline selector modal
+  if (showHeadlineSelector && outline) {
+    return (
+      <HeadlineSelector
+        headlines={outline.headlines ?? []}
+        defaultTitle={outline.title}
+        onSelect={handleHeadlineSelect}
+        isGenerating={generateStream.isPending}
+      />
     );
   }
 
@@ -211,8 +317,8 @@ function WorkbenchContent() {
   };
   const references =
     article?.references ??
-    (outline?.references ?? []).map((r) => ({
-      id: r.id ?? "",
+    (outline?.references ?? []).map((r, i) => ({
+      id: r.id ?? `ref-${i}`,
       title: r.title,
       source: r.source,
       lastUpdated: "",
@@ -235,19 +341,22 @@ function WorkbenchContent() {
           lastSaved={lastSaved}
         />
         <ToolButtons
-          onAnalyzeMetrics={handleAnalyzeMetrics}
-          isAnalyzing={aiMetrics.isPending}
+          onTranslate={handleTranslate}
+          isTranslating={aiTranslate.isPending}
+          onFactCheck={handleFactCheck}
+          isFactChecking={aiFactCheck.isPending}
         />
       </div>
 
       {/* Main content - three column layout */}
       <div className="flex-1 px-lg pb-lg flex gap-md overflow-hidden">
         {/* Left nav sidebar */}
-        <div className="w-[64px] shrink-0 bg-card rounded-md shadow-card flex flex-col items-center py-4 gap-3">
+        <div className="w-[64px] shrink-0 bg-card rounded-md shadow-card flex flex-col items-center py-4 gap-2">
           {sections.map((section, i) => (
             <div
               key={section.id ?? i}
-              className="h-8 w-8 rounded-md bg-brand/10 flex items-center justify-center text-brand"
+              title={section.title}
+              className="h-8 w-8 rounded-md bg-brand/8 hover:bg-brand/15 transition-colors flex items-center justify-center text-brand cursor-default"
             >
               <span className="text-xs font-bold">{section.number}</span>
             </div>
@@ -256,7 +365,10 @@ function WorkbenchContent() {
 
         {/* Editor column */}
         <div className="flex-1 min-w-0 flex flex-col gap-2 overflow-hidden">
-          <EditorToolbar />
+          <EditorToolbar
+            onContinueWriting={handleContinueWriting}
+            isContinuingWriting={continueWriting.isPending}
+          />
           <EditorColumn
             title={title}
             author={""}
@@ -280,6 +392,8 @@ function WorkbenchContent() {
           onAcceptSuggestion={handleAcceptSuggestion}
           onRejectSuggestion={handleRejectSuggestion}
           onClearSuggestions={handleClearSuggestions}
+          factCheckResults={factCheckResults}
+          onClearFactCheck={handleClearFactCheck}
         />
       </div>
 

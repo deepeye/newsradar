@@ -2,7 +2,7 @@
 
 export type TrendStatus = "explosive" | "new" | "rank_up" | "rank_down" | "stable";
 
-export type Platform = "weibo" | "douyin" | "zhihu" | "baidu" | "bilibili" | "toutiao" | "twitter";
+export type Platform = "weibo" | "douyin" | "zhihu" | "baidu" | "bilibili" | "toutiao" | "pengpai";
 
 export type CategoryFilter = "all" | "society" | "tech" | "finance";
 

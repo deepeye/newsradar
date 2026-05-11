@@ -40,9 +40,6 @@ class CookieEntry(Base):
     __tablename__ = "cookie_pool"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
-    source_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False,
-    )
     cookies: Mapped[dict] = mapped_column(JSONB, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     platform: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)

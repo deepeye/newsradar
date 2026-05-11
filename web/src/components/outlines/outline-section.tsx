@@ -36,9 +36,9 @@ export function OutlineSectionView({ section }: OutlineSectionProps) {
         {/* Content */}
         {isOpen && (
           <div className="px-md pb-md pl-12 space-y-2">
-            {section.items.map((item) => (
+            {section.items.map((item, itemIdx) => (
               <div
-                key={item.id}
+                key={item.id ?? `item-${itemIdx}`}
                 className="flex items-start gap-3 p-3 bg-card/60 rounded-md group hover:bg-card transition-colors"
               >
                 <span className="text-xs text-muted-foreground mt-0.5 font-mono">
@@ -76,8 +76,8 @@ export function OutlineSectionList({ sections }: OutlineSectionListProps) {
         <h3 className="font-serif text-base font-semibold">结构化大纲框架</h3>
       </div>
       <div className="space-y-2">
-        {sections.map((section) => (
-          <OutlineSectionView key={section.id} section={section} />
+        {sections.map((section, i) => (
+          <OutlineSectionView key={section.id ?? `section-${i}`} section={section} />
         ))}
       </div>
     </div>

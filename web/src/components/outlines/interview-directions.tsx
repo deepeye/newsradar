@@ -15,7 +15,7 @@ export function InterviewDirections({ directions }: InterviewDirectionsProps) {
       <div className="space-y-2">
         {directions.map((d, i) => (
           <div
-            key={d.id}
+            key={d.id ?? `dir-${i}`}
             className="flex items-start gap-3 p-3 bg-card rounded-md shadow-card"
           >
             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-tertiary/10 text-tertiary text-xs font-bold shrink-0">

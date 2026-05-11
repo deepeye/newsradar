@@ -26,11 +26,59 @@ class ReferenceDoc(CamelModel):
     last_updated: Optional[str] = None
 
 
+class ContinueWritingResponse(CamelModel):
+    continued_content: str = ""
+    section_title: str = ""
+
+
+class TranslateRequest(CamelModel):
+    target_language: str = Field(..., min_length=1)
+
+
+class TranslateResponse(CamelModel):
+    translated_content: str = ""
+    target_language: str = ""
+
+
+class FactClaim(CamelModel):
+    claim: str
+    type: str
+    confidence: str
+    search_query: str
+
+
+class SearchEvidence(CamelModel):
+    title: str
+    snippet: str
+    source: str
+    url: str
+
+
+class FactCheckResultItem(CamelModel):
+    claim: str
+    type: str
+    confidence: str
+    status: str
+    evidence: str
+    source_urls: List[str] = []
+
+
+class FactCheckResponse(CamelModel):
+    claims: List[FactClaim] = []
+    search_results: List[SearchEvidence] = []
+    results: List[FactCheckResultItem] = []
+
+
 class ArticleCreateRequest(CamelModel):
     title: str = Field(..., min_length=1, max_length=500)
     outline_id: Optional[str] = None
     target_word_count: int = 1600
     urgent: bool = False
+
+
+class GenerateArticleFromOutlineRequest(CamelModel):
+    outline_id: str = Field(..., min_length=1)
+    headline_index: Optional[int] = None
 
 
 class ArticleUpdateRequest(CamelModel):

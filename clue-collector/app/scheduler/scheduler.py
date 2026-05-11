@@ -46,6 +46,7 @@ class Scheduler:
         while self.running:
             try:
                 await self._scan_and_schedule()
+                await task_queue.move_retry_to_main()
                 await asyncio.sleep(self.interval)
             except Exception as e:
                 logger.error("scheduler_loop_error", error=str(e))
@@ -137,7 +138,7 @@ class Scheduler:
         return False
 
     async def force_trigger(self, group_id: Optional[UUID] = None) -> int:
-        """强制触发采集"""
+        """强制触发采集 - 跳过 _should_trigger 检查"""
         async with db_manager.session() as session:
             if group_id:
                 result = await session.execute(
@@ -151,10 +152,35 @@ class Scheduler:
                 groups = result.scalars().all()
 
             count = 0
+            now = datetime.now(timezone.utc)
             for group in groups:
-                if group:
-                    await self._process_group(session, group)
-                    count += 1
+                if not group:
+                    continue
+
+                result2 = await session.execute(
+                    select(DataSource)
+                    .where(DataSource.group_id == group.id)
+                    .where(DataSource.is_active == True)
+                    .where(DataSource.status.in_([SourceStatus.ACTIVE, SourceStatus.ERROR]))
+                    .order_by(DataSource.priority.desc())
+                )
+                sources = result2.scalars().all()
+
+                for source in sources:
+                    task = Task(
+                        id=f"{source.id}_{now.timestamp()}",
+                        source_id=str(source.id),
+                        priority=source.priority,
+                        metadata={
+                            "collector_type": source.collector_type,
+                            "source_type": source.type.value,
+                            "config": source.config
+                        }
+                    )
+                    await task_queue.push(task)
+
+                group.updated_at = now
+                count += 1
 
             logger.info("force_trigger_completed", count=count)
             return count

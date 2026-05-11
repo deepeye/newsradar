@@ -1,6 +1,6 @@
 """
 Cookie管理 CLI
-支持添加、查看、删除Cookie
+支持添加、查看、删除Cookie（按平台组织）
 """
 import asyncio
 import json
@@ -23,11 +23,11 @@ def cli():
 
 
 @cli.command("add")
-@click.option("--source-id", required=True, help="数据源ID")
+@click.option("--platform", required=True, help="平台: x/weibo")
 @click.option("--cookie", required=True, help="Cookie字符串或JSON文件路径")
 @click.option("--name", default=None, help="Cookie名称")
 @click.option("--expires-days", default=None, type=int, help="有效期(天)")
-def add_cookie(source_id: str, cookie: str, name: str, expires_days: int):
+def add_cookie(platform: str, cookie: str, name: str, expires_days: int):
     """添加Cookie"""
     async def _add():
         await db_manager.initialize()
@@ -48,22 +48,22 @@ def add_cookie(source_id: str, cookie: str, name: str, expires_days: int):
                         key, value = item.split("=", 1)
                         cookies[key.strip()] = value.strip()
         except Exception as e:
-            print(f"❌ Cookie解析失败: {e}")
+            print(f"Cookie解析失败: {e}")
             await db_manager.close()
             return
 
         # 添加Cookie
         await cookie_pool.initialize()
         cookie_id = await cookie_pool.add_cookie(
-            source_id=source_id,
             cookies=cookies,
+            platform=platform,
             name=name,
             expires_days=expires_days
         )
 
-        print(f"✅ Cookie添加成功")
+        print(f"Cookie添加成功")
         print(f"   ID: {cookie_id}")
-        print(f"   数据源: {source_id}")
+        print(f"   平台: {platform}")
         print(f"   名称: {name or '未命名'}")
         print(f"   Cookie数量: {len(cookies)}")
         if expires_days:
@@ -76,10 +76,10 @@ def add_cookie(source_id: str, cookie: str, name: str, expires_days: int):
 
 
 @cli.command("add-batch")
-@click.option("--source-id", required=True, help="数据源ID")
+@click.option("--platform", required=True, help="平台: x/weibo")
 @click.option("--file", required=True, help="JSON文件路径(包含多个Cookie)")
 @click.option("--expires-days", default=None, type=int, help="有效期(天)")
-def add_batch(source_id: str, file: str, expires_days: int):
+def add_batch(platform: str, file: str, expires_days: int):
     """批量添加Cookie"""
     async def _add():
         await db_manager.initialize()
@@ -89,18 +89,18 @@ def add_batch(source_id: str, file: str, expires_days: int):
                 data = json.load(f)
                 cookies_list = data if isinstance(data, list) else [data]
         except Exception as e:
-            print(f"❌ 文件读取失败: {e}")
+            print(f"文件读取失败: {e}")
             await db_manager.close()
             return
 
         await cookie_pool.initialize()
         ids = await cookie_pool.add_cookies_batch(
-            source_id=source_id,
             cookies_list=cookies_list,
+            platform=platform,
             expires_days=expires_days
         )
 
-        print(f"✅ 批量添加成功，共{len(ids)}个Cookie")
+        print(f"批量添加成功，共{len(ids)}个Cookie")
         for i, id in enumerate(ids):
             print(f"   [{i+1}] {id}")
 
@@ -111,17 +111,17 @@ def add_batch(source_id: str, file: str, expires_days: int):
 
 
 @cli.command("list")
-@click.option("--source-id", default=None, help="过滤数据源ID")
+@click.option("--platform", default=None, help="过滤平台: x/weibo")
 @click.option("--status", default=None, help="过滤状态: active/invalid/expired")
-def list_cookies(source_id: str, status: str):
+def list_cookies(platform: str, status: str):
     """列出Cookie"""
     async def _list():
         await db_manager.initialize()
 
         async with db_manager.session() as session:
             query = select(CookieEntry).order_by(CookieEntry.created_at.desc())
-            if source_id:
-                query = query.where(CookieEntry.source_id == uuid.UUID(source_id))
+            if platform:
+                query = query.where(CookieEntry.platform == platform)
             if status:
                 query = query.where(CookieEntry.status == status)
 
@@ -136,11 +136,10 @@ def list_cookies(source_id: str, status: str):
             print("\nCookie池列表:")
             print("-" * 80)
             for c in cookies:
-                status_icon = {"active": "✓", "invalid": "✗", "expired": "⏰"}.get(c.status, "?")
+                status_icon = {"active": "OK", "invalid": "X", "expired": "EXP"}.get(c.status, "?")
                 expires = c.expires_at.strftime("%Y-%m-%d") if c.expires_at else "永久"
                 success_rate = c.success_rate() if c.use_count > 0 else "N/A"
-                print(f"  [{status_icon}] {c.id} | {c.name or '未命名'} | {c.status}")
-                print(f"       数据源: {c.source_id}")
+                print(f"  [{status_icon}] {c.id} | {c.name or '未命名'} | {c.platform} | {c.status}")
                 print(f"       使用: {c.use_count}次 | 成功: {c.success_count} | 成功率: {success_rate:.0%}")
                 print(f"       过期: {expires} | 添加: {c.created_at.strftime('%Y-%m-%d')}")
 
@@ -150,15 +149,15 @@ def list_cookies(source_id: str, status: str):
 
 
 @cli.command("stats")
-@click.option("--source-id", required=True, help="数据源ID")
-def stats(source_id: str):
+@click.option("--platform", required=True, help="平台: x/weibo")
+def stats(platform: str):
     """查看统计"""
     async def _stats():
         await db_manager.initialize()
         await cookie_pool.initialize()
 
-        stats = await cookie_pool.get_stats(source_id)
-        print(f"\nCookie池统计 ({source_id}):")
+        stats = await cookie_pool.get_stats(platform)
+        print(f"\nCookie池统计 ({platform}):")
         print("-" * 40)
         print(f"  总数: {stats['total']}")
         print(f"  可用: {stats['active']}")
@@ -183,9 +182,9 @@ def invalidate(id: str):
 
         result = await cookie_pool.invalidate_cookie(uuid.UUID(id))
         if result:
-            print(f"✅ Cookie已失效: {id}")
+            print(f"Cookie已失效: {id}")
         else:
-            print(f"❌ Cookie不存在: {id}")
+            print(f"Cookie不存在: {id}")
 
         await cookie_pool.close()
         await db_manager.close()
@@ -203,9 +202,9 @@ def delete(id: str):
 
         result = await cookie_pool.delete_cookie(uuid.UUID(id))
         if result:
-            print(f"✅ Cookie已删除: {id}")
+            print(f"Cookie已删除: {id}")
         else:
-            print(f"❌ Cookie不存在: {id}")
+            print(f"Cookie不存在: {id}")
 
         await cookie_pool.close()
         await db_manager.close()
@@ -232,7 +231,7 @@ def cleanup(expired: bool, invalid_days: int):
         total += n
         print(f"失效Cookie(>{invalid_days}天): {n}个")
 
-        print(f"\n✅ 共清理: {total}个Cookie")
+        print(f"\n共清理: {total}个Cookie")
 
         await cookie_pool.close()
         await db_manager.close()

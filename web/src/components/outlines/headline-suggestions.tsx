@@ -18,8 +18,8 @@ export function HeadlineSuggestions({ headlines }: HeadlineSuggestionsProps) {
         </Button>
       </div>
       <div className="space-y-2">
-        {headlines.map((h) => (
-          <Card key={h.id} className="bg-card shadow-card border-0 hover:shadow-card-hover transition-shadow cursor-pointer">
+        {headlines.map((h, i) => (
+          <Card key={h.id ?? `hl-${i}`} className="bg-card shadow-card border-0 hover:shadow-card-hover transition-shadow cursor-pointer">
             <CardContent className="p-md flex items-start gap-3">
               <span className="px-2 py-1 rounded bg-muted text-xs text-muted-foreground font-medium shrink-0">
                 {h.style}

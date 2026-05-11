@@ -54,7 +54,7 @@ class AntiCrawlModule:
         logger.info("anti_crawl_closed")
 
     async def get_context(self, source_id: str, platform: Optional[str] = None) -> RequestContext:
-        """获取请求上下文（支持Cookie轮换，X平台共享Cookie）"""
+        """获取请求上下文（Cookie按平台共享）"""
         if not self.enabled:
             return RequestContext()
 
@@ -68,12 +68,13 @@ class AntiCrawlModule:
         user_agent = ua_rotator.get_ua(platform)
         headers = ua_rotator.get_ua_with_headers(platform)
 
-        # 获取Cookie（X平台共享，其他平台按source_id）
+        # 获取Cookie（按平台查找）
         cookies = None
         cookie_id = None
-        cookie_data, cookie_id = await cookie_pool.get_cookie(source_id, platform=platform)
-        if cookie_data:
-            cookies = cookie_data
+        if platform:
+            cookie_data, cookie_id = await cookie_pool.get_cookie(platform)
+            if cookie_data:
+                cookies = cookie_data
 
         return RequestContext(
             proxy=proxy,
@@ -149,28 +150,26 @@ class AntiCrawlModule:
 
     async def add_cookies(
         self,
-        source_id: str,
         cookies: Dict[str, str],
+        platform: str,
         name: Optional[str] = None,
         expires_days: Optional[int] = None,
-        platform: Optional[str] = None
     ) -> UUID:
         """添加Cookie到池"""
-        return await cookie_pool.add_cookie(source_id, cookies, name, expires_days, platform=platform)
+        return await cookie_pool.add_cookie(cookies, platform=platform, name=name, expires_days=expires_days)
 
     async def add_cookies_batch(
         self,
-        source_id: str,
         cookies_list: List[Dict[str, str]],
+        platform: str,
         expires_days: Optional[int] = None,
-        platform: Optional[str] = None
     ) -> List[UUID]:
         """批量添加Cookie"""
-        return await cookie_pool.add_cookies_batch(source_id, cookies_list, expires_days, platform=platform)
+        return await cookie_pool.add_cookies_batch(cookies_list, platform=platform, expires_days=expires_days)
 
-    async def invalidate_cookies(self, source_id: str) -> int:
-        """失效某个数据源的所有Cookie"""
-        return await cookie_pool.invalidate_source_cookies(source_id)
+    async def invalidate_cookies(self, platform: str) -> int:
+        """失效某个平台的所有Cookie"""
+        return await cookie_pool.invalidate_platform_cookies(platform)
 
     async def health_check(self) -> Dict[str, int]:
         """健康检查"""
