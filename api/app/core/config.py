@@ -41,5 +41,11 @@ class Settings(BaseSettings):
     # AI Cache
     AI_CACHE_TTL: int = 300
 
+    # CORS
+    CORS_ORIGINS: str = "http://localhost:3000"
+
+    # Inter-service communication
+    COLLECTOR_API_URL: str = "http://localhost:8002"
+
 
 settings = Settings()

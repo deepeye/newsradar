@@ -4,7 +4,7 @@ services:
     image: nginx:alpine
     container_name: newsradar-nginx
     ports:
-      - "8084:80"
+      - "${NGINX_PORT:-8084}:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
@@ -19,9 +19,9 @@ services:
     build:
       context: ../web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /newsradar
     container_name: newsradar-web
-    ports:
-      - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=/newsradar
       - HOSTNAME=0.0.0.0
@@ -44,16 +44,16 @@ services:
       context: ../api
       dockerfile: Dockerfile
     container_name: newsradar-api
-    ports:
-      - "8001:8001"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/newsradar
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-newsradar}
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-key-change-in-prod}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
       - QWEN_API_KEY=${QWEN_API_KEY}
       - QWEN_API_BASE=${QWEN_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
+      - COLLECTOR_API_URL=http://collector:8002
       - APP_PORT=8001
-      - APP_ENV=development
+      - APP_ENV=${APP_ENV:-development}
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,15 +70,15 @@ services:
       dockerfile: Dockerfile
     container_name: newsradar-collector
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/newsradar
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-newsradar}
       - REDIS_URL=redis://redis:6379/0
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - QWEN_API_KEY=${QWEN_API_KEY}
       - QWEN_API_BASE=${QWEN_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1}
       - TRANSLATION_ENABLED=${TRANSLATION_ENABLED:-true}
       - TRANSLATION_THINKING_ENABLED=${TRANSLATION_THINKING_ENABLED:-false}
-      - HTTP_PROXY=${HTTP_PROXY:-http://host.docker.internal:7897}
-      - HTTPS_PROXY=${HTTPS_PROXY:-http://host.docker.internal:7897}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,17 +93,15 @@ services:
     image: postgres:15-alpine
     container_name: newsradar-postgres
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=newsradar
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-newsradar}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     networks:
       - newsradar-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d newsradar"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-newsradar}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -115,8 +113,6 @@ services:
     container_name: newsradar-redis
     volumes:
       - redis-data:/data
-    ports:
-      - "6379:6379"
     networks:
       - newsradar-network
     restart: unless-stopped

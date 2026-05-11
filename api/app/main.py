@@ -24,6 +24,19 @@ async def lifespan(app: FastAPI):
     await cache_manager.initialize()
     logger.info("cache_initialized")
 
+    # Pre-warm discovery cache so first page visit is fast
+    import asyncio
+    from app.services.discovery_service import DiscoveryService
+    cached, ttl = await cache_manager.get_with_ttl("discovery:recommendations")
+    if cached is None:
+        async with db_manager.session() as session:
+            service = DiscoveryService(session)
+            try:
+                await service._generate_and_cache()
+                logger.info("discovery_cache_prewarmed")
+            except Exception as e:
+                logger.warning("discovery_cache_prewarm_failed", error=str(e))
+
     yield
 
     logger.info("application_shutting_down")
@@ -41,7 +54,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.CORS_ORIGINS.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
