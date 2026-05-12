@@ -152,6 +152,10 @@ class WorkbenchService:
             target_word_count=target_word_count,
             urgent=outline.urgency == "高",
         )
+        # Flush so the article is visible to subsequent requests
+        # before the SSE stream finishes (the request-level commit
+        # only happens after StreamingResponse completes)
+        await self.db.commit()
 
         yield {"event": "created", "data": {
             "articleId": str(article.id),
@@ -180,6 +184,27 @@ class WorkbenchService:
         await self.article_repo.save(article.id, content=accumulated)
         final_article = await self.article_repo.get_by_id(article.id)
         yield {"event": "done", "data": self._format_article(final_article) if final_article else {}}
+
+    async def ai_suggest_from_content(self, title: str, content: str) -> dict:
+        try:
+            suggestions = await self.ai_service.generate_writing_suggestions(
+                title=title,
+                content=content,
+            )
+            formatted = [
+                {
+                    "id": f"sug{i+1}",
+                    "type": s.get("type", "style"),
+                    "original": s.get("original", ""),
+                    "suggested": s.get("suggested", ""),
+                    "reason": s.get("reason", ""),
+                }
+                for i, s in enumerate(suggestions)
+            ]
+            return {"aiSuggestions": formatted}
+        except Exception as e:
+            logger.error("workbench_ai_suggest_from_content_failed", error=str(e))
+            return {"aiSuggestions": []}
 
     async def ai_suggest(self, article_id: UUID) -> Optional[dict]:
         article = await self.article_repo.get_by_id(article_id)

@@ -71,15 +71,15 @@ export function useSaveArticle() {
 }
 
 export function useAISuggest() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (articleId: string) =>
+    mutationFn: ({ title, content }: { title: string; content: string }) =>
       fetchFromApi<{ aiSuggestions: AISuggestion[] }>(
-        `/api/workbench/articles/${articleId}/ai-suggest`,
-        { method: "POST" }
+        "/api/workbench/articles/suggest",
+        {
+          method: "POST",
+          body: JSON.stringify({ title, content }),
+        }
       ),
-    onSuccess: (_, articleId) =>
-      qc.invalidateQueries({ queryKey: ["article", articleId] }),
   });
 }
 

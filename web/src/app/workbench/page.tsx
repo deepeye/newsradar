@@ -33,6 +33,7 @@ function WorkbenchContent() {
   const [localSuggestions, setLocalSuggestions] = useState<AISuggestion[]>([]);
   const [useLocalSuggestions, setUseLocalSuggestions] = useState(false);
   const [factCheckResults, setFactCheckResults] = useState<FactCheckResult[]>([]);
+  const [dateStr, setDateStr] = useState("");
   const [showHeadlineSelector, setShowHeadlineSelector] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -44,6 +45,18 @@ function WorkbenchContent() {
   const aiTranslate = useAITranslate();
   const aiFactCheck = useAIFactCheck();
   const { data: article, isLoading: articleLoading } = useArticle(articleId);
+
+  // Client-only date string to avoid hydration mismatch
+  useEffect(() => {
+    setDateStr(
+      article?.createdAt
+        ? new Date(article.createdAt).toLocaleDateString("zh-CN")
+        : new Date().toLocaleDateString("zh-CN")
+    );
+  }, [article?.createdAt]);
+
+  // Derived title — used by suggestion handler before rendering
+  const title = article?.title ?? outline?.title ?? "";
 
   // Show headline selector when outline loads
   useEffect(() => {
@@ -128,25 +141,19 @@ function WorkbenchContent() {
 
   // AI suggest handler
   const handleRequestSuggestions = useCallback(() => {
-    if (!articleId) return;
-    // Save content first before requesting suggestions
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveArticle.mutate(
-      { articleId, content: draftContent },
+    if (!draftContent) return;
+    aiSuggest.mutate(
+      { title, content: draftContent },
       {
-        onSuccess: () => {
-          aiSuggest.mutate(articleId, {
-            onSuccess: (result) => {
-              if (result.aiSuggestions) {
-                setLocalSuggestions(result.aiSuggestions);
-                setUseLocalSuggestions(true);
-              }
-            },
-          });
+        onSuccess: (result) => {
+          if (result.aiSuggestions) {
+            setLocalSuggestions(result.aiSuggestions);
+            setUseLocalSuggestions(true);
+          }
         },
       }
     );
-  }, [articleId, draftContent, saveArticle, aiSuggest]);
+  }, [draftContent, title, aiSuggest]);
 
   // Accept suggestion: replace original with suggested in content
   const handleAcceptSuggestion = useCallback(
@@ -298,7 +305,6 @@ function WorkbenchContent() {
   }
 
   // Derived data
-  const title = article?.title ?? outline?.title ?? "";
   const wordCount = draftContent.length;
   const targetWordCount = article?.targetWordCount ?? 3000;
   const completionPercent = Math.min(
@@ -372,11 +378,7 @@ function WorkbenchContent() {
           <EditorColumn
             title={title}
             author={""}
-            date={
-              article?.createdAt
-                ? new Date(article.createdAt).toLocaleDateString("zh-CN")
-                : new Date().toLocaleDateString("zh-CN")
-            }
+            date={dateStr}
             urgent={article?.urgent ?? false}
             content={draftContent}
             onContentChange={handleContentChange}

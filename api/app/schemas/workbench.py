@@ -31,6 +31,15 @@ class ContinueWritingResponse(CamelModel):
     section_title: str = ""
 
 
+class SuggestRequest(CamelModel):
+    title: str = Field(default="")
+    content: str = Field(..., min_length=1)
+
+
+class SuggestResponse(CamelModel):
+    ai_suggestions: List[AISuggestionItem] = []
+
+
 class TranslateRequest(CamelModel):
     target_language: str = Field(..., min_length=1)
 

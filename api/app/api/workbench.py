@@ -18,6 +18,8 @@ from app.schemas.workbench import (
     TranslateResponse,
     GenerateArticleFromOutlineRequest,
     FactCheckResponse,
+    SuggestRequest,
+    SuggestResponse,
 )
 from app.core.exceptions import NotFoundException
 
@@ -124,6 +126,16 @@ async def delete_article(
     if not deleted:
         raise NotFoundException("Article not found")
     return {"detail": "Deleted"}
+
+
+@router.post("/articles/suggest", response_model=SuggestResponse)
+async def suggest_from_content(
+    request: SuggestRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = WorkbenchService(db)
+    return await service.ai_suggest_from_content(request.title, request.content)
 
 
 @router.post("/articles/{article_id}/ai-suggest")
