@@ -12,10 +12,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_index("ix_clues_source_id", "clues", ["source_id"])
-    op.create_index("ix_clues_source_rank", "clues", ["source_id", op.text('"rank"')])
-    op.create_index("ix_clues_source_collected", "clues", ["source_id", "collected_at"])
-    op.create_index("ix_clues_collected_at", "clues", ["collected_at"])
+    # These indexes may already exist if collector migrations ran first
+    op.execute("CREATE INDEX IF NOT EXISTS ix_clues_source_id ON clues (source_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_clues_source_rank ON clues (source_id, \"rank\")")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_clues_source_collected ON clues (source_id, collected_at)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_clues_collected_at ON clues (collected_at)")
 
 
 def downgrade() -> None:
