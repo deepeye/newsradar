@@ -118,7 +118,7 @@ export async function fetchFromApi<T>(
   if (res.status === 401) {
     clearToken();
     if (typeof window !== "undefined") {
-      window.location.href = "/login";
+      window.location.href = "/newsradar/login";
     }
     throw new Error("Unauthorized");
   }
@@ -180,7 +180,7 @@ export function fetchFromApiSSE(
   }).then(async (res) => {
     if (res.status === 401) {
       clearToken();
-      window.location.href = "/login";
+      window.location.href = "/newsradar/login";
       return;
     }
     if (!res.ok) {
