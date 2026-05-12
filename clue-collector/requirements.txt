@@ -15,6 +15,10 @@ asyncpg>=0.29.0
 # 缓存和队列
 redis>=5.0.0
 
+# HTTP服务和API
+uvicorn>=0.25.0
+fastapi>=0.109.0
+
 # HTTP客户端
 httpx>=0.25.0
 

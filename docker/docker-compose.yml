@@ -92,6 +92,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: newsradar-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
@@ -111,6 +113,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: newsradar-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     networks:
