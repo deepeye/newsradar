@@ -41,4 +41,4 @@ COPY scripts/ ./scripts/
 COPY alembic.ini .
 
 # 运行数据库迁移并启动服务
-CMD ["sh", "-c", "alembic upgrade head && python -m app.main"]
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run python -m app.main"]

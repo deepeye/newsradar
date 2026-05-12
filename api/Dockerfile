@@ -17,4 +17,4 @@ COPY migrations/ ./migrations/
 COPY scripts/ ./scripts/
 COPY alembic.ini .
 
-CMD ["sh", "-c", "alembic upgrade head && python scripts/init_db.py && uvicorn app.main:app --host 0.0.0.0 --port ${APP_PORT:-8001}"]
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run python scripts/init_db.py && uv run uvicorn app.main:app --host 0.0.0.0 --port ${APP_PORT:-8001}"]
